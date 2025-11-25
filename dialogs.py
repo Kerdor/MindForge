@@ -5,11 +5,15 @@ from typing import Optional, Callable, Any
 class ConfirmDeletionDialog(tk.Toplevel):
     """Dialog for confirming deletion with options"""
     
+    # Class variable to store the "Don't ask again" preference
+    dont_ask_again = False
+    
     def __init__(self, parent, title: str, message: str, has_notes: bool = False):
         super().__init__(parent)
         self.title(title)
         self.parent = parent
         self.result = None
+        self.dont_ask_var = None  # Instance variable for the checkbox
         
         # Center the dialog
         self.transient(parent)
@@ -66,12 +70,13 @@ class ConfirmDeletionDialog(tk.Toplevel):
         btn_frame = ttk.Frame(self, padding=10)
         btn_frame.pack(fill=tk.X, side=tk.BOTTOM)
         
-        self.dont_ask = tk.BooleanVar(value=False)
         if not has_notes:  # Only show for simple confirmations
+            self.dont_ask_var = tk.BooleanVar(value=ConfirmDeletionDialog.dont_ask_again)
             ttk.Checkbutton(
                 btn_frame, 
                 text="Больше не спрашивать",
-                variable=self.dont_ask
+                variable=self.dont_ask_var,
+                command=self._update_dont_ask_again
             ).pack(side=tk.LEFT, padx=5)
         
         ttk.Button(
@@ -92,11 +97,18 @@ class ConfirmDeletionDialog(tk.Toplevel):
             command=self._on_confirm
         ).pack(side=tk.RIGHT, padx=5)
     
+    def _update_dont_ask_again(self):
+        if self.dont_ask_var is not None:
+            ConfirmDeletionDialog.dont_ask_again = self.dont_ask_var.get()
+    
     def _on_confirm(self):
         if hasattr(self, 'action'):
             self.result = self.action.get()
         else:
             self.result = "delete"
+        # Update the preference when confirming
+        if self.dont_ask_var is not None:
+            ConfirmDeletionDialog.dont_ask_again = self.dont_ask_var.get()
         self.destroy()
     
     def _on_cancel(self):
@@ -106,6 +118,10 @@ class ConfirmDeletionDialog(tk.Toplevel):
     @staticmethod
     def show(parent, title: str, message: str, has_notes: bool = False) -> Optional[str]:
         """Show the dialog and return the user's choice"""
+        # If "Don't ask again" is checked and this is a simple confirmation (no notes)
+        if not has_notes and ConfirmDeletionDialog.dont_ask_again:
+            return "delete"
+            
         dialog = ConfirmDeletionDialog(parent, title, message, has_notes)
         parent.wait_window(dialog)
         return dialog.result

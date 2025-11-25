@@ -98,3 +98,157 @@ AttributeError: 'DatabaseManager' object has no attribute 'close'
 Traceback (most recent call last):
   File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 758, in on_closing
 AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:39:49,997 - __main__ - ERROR - Error loading notes: 'Treeview' object has no attribute 'window_create'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1523, in load_notes_list
+    self.notes_list.window_create(item_id, 'end', window=delete_btn)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Treeview' object has no attribute 'window_create'
+2025-11-26 00:39:54,991 - __main__ - ERROR - Error loading notes: 'Treeview' object has no attribute 'window_create'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1523, in load_notes_list
+    self.notes_list.window_create(item_id, 'end', window=delete_btn)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Treeview' object has no attribute 'window_create'
+2025-11-26 00:40:14,277 - __main__ - ERROR - Error during application shutdown: string index out of range
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 959, in on_closing
+    self.save_current_note()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 852, in save_current_note
+    topic_id = self.topics_tree.item(selected_topic[0])['values'][0]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: string index out of range
+2025-11-26 00:40:28,823 - __main__ - ERROR - Error loading notes: 'Treeview' object has no attribute 'window_create'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1523, in load_notes_list
+    self.notes_list.window_create(item_id, 'end', window=delete_btn)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Treeview' object has no attribute 'window_create'
+2025-11-26 00:40:32,958 - __main__ - ERROR - Error loading notes: 'Treeview' object has no attribute 'window_create'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1523, in load_notes_list
+    self.notes_list.window_create(item_id, 'end', window=delete_btn)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Treeview' object has no attribute 'window_create'
+2025-11-26 00:40:34,573 - __main__ - ERROR - Error during application shutdown: string index out of range
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 959, in on_closing
+    self.save_current_note()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 852, in save_current_note
+    topic_id = self.topics_tree.item(selected_topic[0])['values'][0]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: string index out of range
+2025-11-26 00:41:18,058 - __main__ - ERROR - Error loading notes: 'Treeview' object has no attribute 'window'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1524, in load_notes_list
+    self.notes_list.window(item_id, column='delete', window=delete_btn)
+    ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Treeview' object has no attribute 'window'
+2025-11-26 00:41:30,326 - __main__ - ERROR - Error loading notes: 'Treeview' object has no attribute 'window'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1524, in load_notes_list
+    self.notes_list.window(item_id, column='delete', window=delete_btn)
+    ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Treeview' object has no attribute 'window'
+2025-11-26 00:41:36,860 - __main__ - ERROR - Error during application shutdown: string index out of range
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 959, in on_closing
+    self.save_current_note()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 852, in save_current_note
+    topic_id = self.topics_tree.item(selected_topic[0])['values'][0]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: string index out of range
+2025-11-26 00:41:54,152 - __main__ - ERROR - Error loading notes: 'Treeview' object has no attribute 'window'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1526, in load_notes_list
+    self.notes_list.window(item_id, column='delete', window=delete_btn)
+    ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Treeview' object has no attribute 'window'
+2025-11-26 00:41:57,842 - __main__ - ERROR - Error loading notes: 'Treeview' object has no attribute 'window'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1526, in load_notes_list
+    self.notes_list.window(item_id, column='delete', window=delete_btn)
+    ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Treeview' object has no attribute 'window'
+2025-11-26 00:41:59,182 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 969, in on_closing
+    self.db.close()
+    ^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:42:50,959 - __main__ - CRITICAL - Failed to initialize application: 'NoteTakingApp' object has no attribute 'on_notes_list_click'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 137, in __init__
+    self.setup_ui()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 387, in setup_ui
+    self.notes_list.bind('<Button-1>', self.on_notes_list_click)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute 'on_notes_list_click'
+2025-11-26 00:43:30,253 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 998, in on_closing
+    self.db.close()
+    ^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:44:16,340 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 998, in on_closing
+    self.db.close()
+    ^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:46:10,355 - database - ERROR - Error searching notes: DISTINCT aggregates must have exactly one argument
+2025-11-26 00:46:48,880 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 998, in on_closing
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:46:49,483 - __main__ - CRITICAL - Failed to initialize application: 'NoteTakingApp' object has no attribute '_create_tooltip'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 137, in __init__
+    self.setup_ui()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 377, in setup_ui
+    self._create_tooltip(search_btn, "Поиск заметок")
+    ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute '_create_tooltip'
+2025-11-26 00:47:10,128 - __main__ - CRITICAL - Failed to initialize application: 'NoteTakingApp' object has no attribute '_create_tooltip'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 137, in __init__
+    self.setup_ui()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 384, in setup_ui
+    self._create_tooltip(search_btn, "Поиск заметок")
+    ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute '_create_tooltip'
+2025-11-26 00:47:38,134 - __main__ - CRITICAL - Failed to initialize application: 'NoteTakingApp' object has no attribute '_create_tooltip'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 137, in __init__
+    self.setup_ui()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 386, in setup_ui
+    self._create_tooltip(search_btn, "Поиск заметок (Ctrl+F)")
+    ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute '_create_tooltip'
+2025-11-26 00:48:06,231 - __main__ - CRITICAL - Failed to initialize application: 'NoteTakingApp' object has no attribute '_create_tooltip'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 137, in __init__
+    self.setup_ui()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 392, in setup_ui
+    self._create_tooltip(search_btn, "Поиск заметок (Ctrl+F)")
+    ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute '_create_tooltip'
+2025-11-26 00:48:26,176 - __main__ - CRITICAL - Failed to initialize application: 'NoteTakingApp' object has no attribute '_create_tooltip'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 137, in __init__
+    self.setup_ui()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 391, in setup_ui
+    self._create_tooltip(search_btn, "Поиск заметок (Ctrl+F)")
+    ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute '_create_tooltip'
+2025-11-26 00:52:08,589 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1068, in on_closing
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:53:21,335 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1091, in on_closing
+    # Add results
+        ^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:53:49,716 - database - ERROR - Error searching notes: DISTINCT aggregates must have exactly one argument

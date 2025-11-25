@@ -117,6 +117,51 @@ class NoteTakingApp:
         self.root = root
         self.root.title("MindForge")
         self.root.geometry("1200x700")
+        self.tooltips = {}  # Store tooltip windows
+        
+    def _create_tooltip(self, widget, text):
+        """Create a tooltip for a given widget.
+        
+        Args:
+            widget: The widget this tooltip is for
+            text: The text to show in the tooltip
+        """
+        tooltip = tk.Toplevel(widget)
+        tooltip.withdraw()  # Hide initially
+        tooltip.overrideredirect(True)  # Remove window decorations
+        
+        # Create and pack the label
+        label = ttk.Label(
+            tooltip,
+            text=text,
+            background='#ffffe0',
+            relief='solid',
+            borderwidth=1,
+            padding=(4, 2),
+            font=('Segoe UI', 9)
+        )
+        label.pack()
+        
+        def show_tooltip(event):
+            # Position the tooltip to the right of the widget
+            x = widget.winfo_rootx() + widget.winfo_width() + 5
+            y = widget.winfo_rooty()
+            tooltip.geometry(f'+{x}+{y}')
+            tooltip.deiconify()
+        
+        def hide_tooltip(event):
+            tooltip.withdraw()
+        
+        # Bind events
+        widget.bind('<Enter>', show_tooltip)
+        widget.bind('<Leave>', hide_tooltip)
+        widget.bind('<ButtonPress>', hide_tooltip)
+        
+    def __init__(self, root):
+        self.root = root
+        self.root.title("MindForge")
+        self.root.geometry("1200x700")
+        self.tooltips = {}  # Store tooltip windows
         
         try:
             # Initialize database
@@ -149,6 +194,8 @@ class NoteTakingApp:
             self.root.bind_all("<Control-f>", lambda e: self.show_search_dialog())
             self.root.bind_all("<Control-t>", lambda e: self.show_tags_dialog())
             self.root.bind_all("<Control-w>", lambda e: self.close_current_note())
+            self.root.bind_all("<Delete>", lambda e: self.delete_selected_note())
+            self.root.bind_all("<Control-d>", lambda e: self.delete_selected_note())
             
             # Track focus changes
             self.root.bind("<Button-1>", self._on_click)
@@ -189,6 +236,32 @@ class NoteTakingApp:
         widget = event.widget
         if hasattr(widget, 'block_id'):
             self.focused_block_id = widget.block_id
+            
+    def on_notes_list_click(self, event):
+        """Handle clicks on the notes list, specifically for the delete button"""
+        # Get the item and column that was clicked
+        region = self.notes_list.identify_region(event.x, event.y)
+        if region == 'cell':
+            item = self.notes_list.identify_row(event.y)
+            column = self.notes_list.identify_column(event.x)
+            
+            # If delete button was clicked (3rd column)
+            if column == '#3' and item:  # Check if item exists
+                # Get the note ID from the item's tags
+                item_tags = self.notes_list.item(item, 'tags')
+                if item_tags and len(item_tags) > 0:
+                    try:
+                        note_id = int(item_tags[0])
+                        # Find the note title
+                        note_title = self.notes_list.item(item, 'values')[0].split(' [')[0]  # Remove topic from title
+                        # Show confirmation and delete
+                        self.delete_note_with_confirmation(note_id, note_title)
+                        return 'break'  # Prevent further event processing
+                    except (ValueError, IndexError) as e:
+                        logger.error(f"Error processing delete click: {e}")
+        
+        # If not a delete button click, let the default behavior happen
+        return None
             
     def show_controls(self, event):
         """Show controls for the clicked block"""
@@ -332,14 +405,39 @@ class NoteTakingApp:
         
         ttk.Label(notes_header, text="Заметки", font=('Segoe UI', 10, 'bold')).pack(side=tk.LEFT, anchor='w')
         
-        # Search button
+        # Configure search button styles
+        self.style.configure('Search.TButton',
+                          font=('Segoe UI', 11),
+                          padding=2,
+                          width=2,
+                          relief='flat',
+                          borderwidth=0,
+                          background='#f0f0f0',
+                          foreground='#555555')
+        
+        self.style.map('Search.TButton',
+                     background=[('active', '#e0e0e0'), ('!active', '#f0f0f0')],
+                     foreground=[('active', '#333333'), ('!active', '#555555')],
+                     relief=[('pressed', 'sunken'), ('!pressed', 'flat')])
+        
+        # Add search button with icon
+        self.search_icon = '🔍'  # Magnifying glass emoji
         search_btn = ttk.Button(
-            notes_header, 
-            text="", 
+            notes_header,
+            text=self.search_icon,
+            command=self.show_search_dialog,
+            style='Search.TButton',
             width=3,
-            command=self.show_search_dialog
+            padding=(0, 2)
         )
-        search_btn.pack(side=tk.RIGHT, padx=(5, 0))
+        search_btn.pack(side=tk.RIGHT, padx=(5, 0), pady=2)
+        
+        # Add tooltip
+        self._create_tooltip(search_btn, "Поиск заметок (Ctrl+F)")
+        
+        # Make the button more touch-friendly on Windows
+        if os.name == 'nt':
+            search_btn.configure(padding=2)
         
         # New note button
         new_note_btn = ttk.Button(
@@ -350,20 +448,64 @@ class NoteTakingApp:
         )
         new_note_btn.pack(side=tk.RIGHT)
         
-        # Notes listbox
+        # Configure Treeview styles
+        self.style.configure('Treeview', 
+                           rowheight=25,
+                           background='white',
+                           fieldbackground='white',
+                           foreground='black')
+        self.style.configure('Treeview.Heading', 
+                           font=('Segoe UI', 10),
+                           background='#f0f0f0')
+        self.style.map('Treeview', 
+                      background=[('selected', '#0078d7')])
+        
+        # Notes list with delete button column
         self.notes_list = ttk.Treeview(
             notes_frame, 
-            columns=('title', 'date'), 
-            show='tree',
-            style='NotesList.Treeview',
-            selectmode='browse'
+            columns=('title', 'date', 'delete'), 
+            show='tree headings',
+            style='Treeview',
+            selectmode='browse',
+            height=15  # Fixed height to show multiple notes
         )
         self.notes_list.heading('#0', text='')
         self.notes_list.column('#0', width=0, stretch=tk.NO)
-        self.notes_list.column('title', width=200, anchor='w')
+        self.notes_list.column('title', width=180, anchor='w')
         self.notes_list.column('date', width=50, anchor='e')
+        self.notes_list.column('delete', width=20, anchor='center', stretch=False)
+        
+        # Configure tags for hover effect
+        self.notes_list.tag_configure('hover', background='#f0f0f0')
+        
+        # Configure delete button style
+        self.style.configure('Delete.TButton', 
+                           font=('Arial', 10, 'bold'),
+                           foreground='red',
+                           padding=0,
+                           width=2)
+        
         self.notes_list.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         self.notes_list.bind('<<TreeviewSelect>>', self.on_note_selected)
+        
+        # Bind mouse enter/leave events for delete button hover
+        self.notes_list.bind('<Motion>', self.on_notes_list_hover) 
+        self.notes_list.bind('<Leave>', self.on_notes_list_leave)
+        
+        # Store the currently hovered item
+        self.hovered_item = None
+        
+        # Bind keyboard shortcuts
+        self.notes_list.bind('<Delete>', lambda e: self.delete_selected_note())
+        self.notes_list.bind('<Control-d>', lambda e: self.delete_selected_note())
+        
+        # Bind click on delete button
+        self.notes_list.bind('<Button-1>', self.on_notes_list_click)
+        
+        # Create context menu for notes list
+        self.note_context_menu = tk.Menu(self.root, tearoff=0)
+        self.note_context_menu.add_command(label="Удалить", command=self.delete_selected_note)
+        self.notes_list.bind('<Button-3>', self.show_note_context_menu)
         
         # Main content area
         content_frame = ttk.Frame(main_frame)
@@ -432,6 +574,15 @@ class NoteTakingApp:
             text="Чеклист", 
             command=lambda: self.add_new_block(BlockType.CHECKLIST)
         ).pack(side=tk.LEFT, padx=2)
+        
+        # Add delete button style
+        self.style.configure('Delete.TButton', 
+                           background='#ffebee', 
+                           foreground='#c62828',
+                           font=('Segoe UI', 8, 'bold'))
+        self.style.map('Delete.TButton',
+                      background=[('active', '#ffcdd2'), ('!active', '#ffebee')],
+                      foreground=[('active', '#b71c1c'), ('!active', '#c62828')])
         
         # Hide controls initially
         self.controls_frame.place_forget()
@@ -557,6 +708,37 @@ class NoteTakingApp:
         if event.num == 1 and event.time - getattr(self, '_last_click_time', 0) < 300:
             self._rename_topic_from_context()
         self._last_click_time = event.time
+        
+    def on_notes_list_hover(self, event):
+        """Handle mouse hover over notes list to show delete button"""
+        region = self.notes_list.identify_region(event.x, event.y)
+        if region == 'cell':
+            # Get the item and column under the cursor
+            item = self.notes_list.identify_row(event.y)
+            column = self.notes_list.identify_column(event.x)
+            
+            # If hovering over the delete column, change cursor and show delete button
+            if column == '#3':  # Delete button column
+                self.notes_list.configure(cursor='hand2')
+                # Store the item ID for click handling
+                self.hovered_item = item
+            else:
+                self.notes_list.configure(cursor='')
+                self.hovered_item = None
+    
+    def on_notes_list_leave(self, event):
+        """Handle mouse leaving notes list"""
+        self.notes_list.configure(cursor='')
+        self.hovered_item = None
+        
+    def show_note_context_menu(self, event):
+        """Show context menu for a note in the listbox"""
+        item = self.notes_list.identify_row(event.y)
+        if not item:
+            return
+            
+        self.notes_list.selection_set(item)
+        self.note_context_menu.post(event.x_root, event.y_root)
     
     def _get_selected_topic(self):
         """Get the currently selected topic ID and name"""
@@ -677,20 +859,56 @@ class NoteTakingApp:
         for item in self.notes_list.get_children():
             self.notes_list.delete(item)
         
+        # Store current topic ID
+        self.current_topic_id = topic_id
+        
+        # Make sure the delete column is properly configured
+        self.notes_list.column('delete', width=20, anchor='center', stretch=False)
+        self.notes_list.heading('delete', text='')
+        
         # Load notes for selected topic
         notes = self.db.load_notes(topic_id)
         
-        # Add notes to list
+        # Store note IDs for reference
+        self.note_ids = []
+        
+        # Add notes to list with delete buttons
         for note in notes:
-            self.notes_list.insert(
+            # Format the date
+            try:
+                updated_at = datetime.strptime(note['updated_at'], '%Y-%m-%d %H:%M:%S').strftime('%d.%m.%y')
+            except (ValueError, TypeError):
+                updated_at = '--.--.--'
+                
+            # Insert the note
+            item_id = self.notes_list.insert(
                 '', 'end',
                 values=(
-                    note['title'],
-                    datetime.strptime(note['updated_at'], '%Y-%m-%d %H:%M:%S').strftime('%d.%m.%y')
+                    note.get('title', 'Без названия'),
+                    updated_at,
+                    '×'  # Delete button
                 ),
                 text='',
-                tags=(note['id'],)
+                tags=(str(note['id']),)
             )
+            
+            # Store note ID for reference
+            self.note_ids.append(note['id'])
+            
+            # Explicitly set the delete button
+            self.notes_list.set(item_id, 'delete', '×')
+            
+            # Apply consistent styling
+            self.notes_list.item(item_id, tags=(str(note['id']), 'note_item'))
+            
+        # Update status bar
+        self.update_status_bar(f"Заметок: {len(notes)}")
+        
+        # If there are notes, select the first one
+        if notes:
+            first_note = self.notes_list.get_children()[0]
+            self.notes_list.selection_set(first_note)
+            self.notes_list.see(first_note)
     
     def on_note_selected(self, event):
         selected = self.notes_list.selection()
@@ -786,7 +1004,9 @@ class NoteTakingApp:
             topic_id = None
             selected_topic = self.topics_tree.selection()
             if selected_topic:
-                topic_id = self.topics_tree.item(selected_topic[0])['values'][0]
+                item_values = self.topics_tree.item(selected_topic[0], 'values')
+                if item_values and len(item_values) > 0:
+                    topic_id = item_values[0]
             
             # Create a Note object
             from models import Note
@@ -1258,9 +1478,16 @@ class NoteTakingApp:
                       font=('Segoe UI', 9, 'bold'))
         
         style.configure('Danger.TButton',
-                      font=('Segoe UI', 9, 'bold'),
-                      foreground='white',
-                      background='#dc3545')
+                      font=('Segoe UI', 12, 'bold'),
+                      foreground='#dc3545',
+                      background='#f8f9fa',
+                      borderwidth=0,
+                      padding=0,
+                      width=2)
+        
+        style.map('Danger.TButton',
+                foreground=[('active', '#ffffff'), ('!active', '#dc3545')],
+                background=[('active', '#dc3545'), ('!active', '#f8f9fa')])
         
         # Configure listbox
         style.configure('Listbox',
@@ -1403,8 +1630,16 @@ class NoteTakingApp:
         self.load_notes_list()
 
     def load_notes_list(self):
-        """Load notes for the selected topic into the listbox"""
+        """Load notes for the selected topic into the listbox with delete buttons"""
         try:
+            # Store current selection
+            selected_note_id = None
+            selection = self.notes_list.selection()
+            if selection:
+                selected_item = selection[0]
+                if hasattr(self, 'note_ids') and self.notes_list.index(selected_item) < len(self.note_ids):
+                    selected_note_id = self.note_ids[self.notes_list.index(selected_item)]
+            
             # Clear existing items
             for item in self.notes_list.get_children():
                 self.notes_list.delete(item)
@@ -1413,7 +1648,7 @@ class NoteTakingApp:
             # Get notes for the selected topic (or all notes if no topic selected)
             notes = self.db.load_notes(self.current_topic_id)
             
-            # Add notes to the listbox with topic indicator
+            # Add notes to the listbox with topic indicator and delete button
             for note in notes:
                 # Get topic name if exists
                 topic_name = ""
@@ -1422,17 +1657,28 @@ class NoteTakingApp:
                     if topic:
                         topic_name = f" [{topic['name']}]"
                 
-                # Add to listbox
-                self.notes_list.insert('', 'end', values=(f"{note['title']}{topic_name}", note['created_at']))
+                # Add to listbox with note ID stored in tags
+                item_id = self.notes_list.insert(
+                    '', 'end', 
+                    values=(f"{note['title']}{topic_name}", note['created_at']),
+                    tags=(str(note['id']),)  # Store note ID in tags
+                )
                 
                 # Store note ID for reference
                 self.note_ids.append(note['id'])
+                
+                # Set delete button text in the delete column
+                self.notes_list.set(item_id, 'delete', '×')  # Using × as delete button text
+                
+                # Restore selection if this was the selected note
+                if selected_note_id == note['id']:
+                    self.notes_list.selection_set(item_id)
             
             # Update status bar
             self.update_status_bar(f"Заметок: {len(notes)}")
             
         except Exception as e:
-            logger.error(f"Error loading notes: {e}")
+            logger.error(f"Error loading notes: {e}", exc_info=True)
             messagebox.showerror("Ошибка", f"Не удалось загрузить заметки: {e}")
 
     def _get_topic_by_id(self, topic_id: int) -> Optional[Dict]:
