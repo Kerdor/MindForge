@@ -31,6 +31,36 @@ class DatabaseManager:
         except sqlite3.Error as e:
             logger.error(f"Error connecting to database: {e}")
             raise DatabaseError(f"Failed to connect to database: {e}")
+            
+    def close(self):
+        """Close the database connection if it exists.
+        This is a no-op since we're using context managers for connections.
+        """
+        pass
+        
+    def get_notes(self, topic_id: int = None) -> list:
+        """Get all notes, optionally filtered by topic_id"""
+        try:
+            with self._get_connection() as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                if topic_id:
+                    cursor.execute('''
+                        SELECT id, title, content, topic_id, created_at, updated_at 
+                        FROM notes 
+                        WHERE topic_id = ?
+                        ORDER BY updated_at DESC
+                    ''', (topic_id,))
+                else:
+                    cursor.execute('''
+                        SELECT id, title, content, topic_id, created_at, updated_at 
+                        FROM notes 
+                        ORDER BY updated_at DESC
+                    ''')
+                return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            logger.error(f"Error getting notes: {e}")
+            raise DatabaseError(f"Failed to get notes: {e}")
     
     def _init_db(self):
         try:
@@ -56,6 +86,7 @@ class DatabaseManager:
                     CREATE TABLE IF NOT EXISTS notes (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         title TEXT NOT NULL,
+                        content TEXT,
                         topic_id INTEGER,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -125,7 +156,16 @@ class DatabaseManager:
             conn.commit()
             return cursor.lastrowid
     
+    def get_topics(self) -> List[Dict]:
+        """Get all topics as a flat list"""
+        with self._get_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('SELECT id, name, parent_id FROM topics ORDER BY name')
+            return [dict(row) for row in cursor.fetchall()]
+    
     def get_topics_tree(self) -> List[Dict]:
+        """Get all topics as a hierarchical tree structure"""
         with self._get_connection() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()

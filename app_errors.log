@@ -252,3 +252,111 @@ Traceback (most recent call last):
         ^^^^^^^^^
 AttributeError: 'DatabaseManager' object has no attribute 'close'
 2025-11-26 00:53:49,716 - database - ERROR - Error searching notes: DISTINCT aggregates must have exactly one argument
+2025-11-26 00:55:15,927 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1124, in on_closing
+    self.db.close()
+    ^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:55:17,892 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1124, in on_closing
+    self.db.close()
+    ^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 01:06:27,784 - __main__ - CRITICAL - Fatal error: NoteTakingApp() takes no arguments
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 619, in main
+    app = NoteTakingApp(root)
+          ^^^^^^^^^^^^^^^^^^^
+TypeError: NoteTakingApp() takes no arguments
+2025-11-26 01:07:16,602 - root - CRITICAL - Fatal error: NoteTakingApp() takes no arguments
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 663, in main
+    app = NoteTakingApp(root)
+          ^^^^^^^^^^^^^^^^^^^
+TypeError: NoteTakingApp() takes no arguments
+2025-11-26 01:07:36,650 - root - CRITICAL - Fatal error: 'NoteTakingApp' object has no attribute 'notes'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 742, in main
+    app = NoteTakingApp(root)
+          ^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 121, in __init__
+    self.setup_ui()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 137, in setup_ui
+    self._setup_sidebar()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 171, in _setup_sidebar
+    self.render_notes_list(self.notes_frame)
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 239, in render_notes_list
+    for note in self.notes:
+                ^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute 'notes'
+2025-11-26 01:08:13,339 - __main__ - ERROR - Failed to set up sidebar: 'NoteTakingApp' object has no attribute 'render_notes_list'
+2025-11-26 01:08:13,339 - __main__ - CRITICAL - UI setup failed: 'NoteTakingApp' object has no attribute 'render_notes_list'
+2025-11-26 01:12:03,679 - __main__ - ERROR - Error loading topics: 'NoteTakingApp' object has no attribute 'topics_tree'
+2025-11-26 01:12:10,012 - __main__ - ERROR - Error loading initial data: 'DatabaseManager' object has no attribute 'get_notes'
+2025-11-26 01:12:58,872 - __main__ - ERROR - Error loading topics: 'NoteTakingApp' object has no attribute 'topics_tree'
+2025-11-26 01:13:02,229 - __main__ - ERROR - Error loading initial data: 'DatabaseManager' object has no attribute 'get_notes'
+2025-11-26 01:14:59,781 - __main__ - ERROR - Error loading notes: Invalid column index delete
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 769, in load_notes_list
+    self.notes_list.set(item_id, 'delete', '\xd7')  # Using \xd7 as delete button text
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nik_s\AppData\Local\Programs\Python\Python311\Lib\tkinter\ttk.py", line 1434, in set
+    res = self.tk.call(self._w, "set", item, column, value)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_tkinter.TclError: Invalid column index delete
+2025-11-26 01:15:04,560 - __main__ - ERROR - Error loading notes: Invalid column index delete
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 769, in load_notes_list
+    self.notes_list.set(item_id, 'delete', '\xd7')  # Using \xd7 as delete button text
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nik_s\AppData\Local\Programs\Python\Python311\Lib\tkinter\ttk.py", line 1434, in set
+    res = self.tk.call(self._w, "set", item, column, value)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_tkinter.TclError: Invalid column index delete
+2025-11-26 01:15:07,966 - database - ERROR - Error getting notes: no such column: content
+2025-11-26 01:15:07,966 - __main__ - ERROR - Error loading initial data: Failed to get notes: no such column: content
+2025-11-26 01:16:16,185 - __main__ - ERROR - Error loading notes: 'NoteTakingApp' object has no attribute 'update_status_bar'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 776, in load_notes_list
+    self.update_status_bar(f"Заметок: {len(notes)}")
+    ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute 'update_status_bar'
+2025-11-26 01:16:22,481 - __main__ - ERROR - Error loading notes: 'NoteTakingApp' object has no attribute 'update_status_bar'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 776, in load_notes_list
+    self.update_status_bar(f"Заметок: {len(notes)}")
+    ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute 'update_status_bar'
+2025-11-26 01:16:25,694 - __main__ - ERROR - Error loading initial data: 'DatabaseManager' object has no attribute 'get_topics'
+2025-11-26 01:25:35,437 - __main__ - ERROR - Error loading initial data: 0
+2025-11-26 01:26:07,754 - __main__ - ERROR - Error loading initial data: DatabaseManager.create_note() takes from 2 to 3 positional arguments but 4 were given
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 166, in load_initial_data
+    self.db.create_note("Добро пожаловать", welcome_content, topics[0]['id'])
+TypeError: DatabaseManager.create_note() takes from 2 to 3 positional arguments but 4 were given
+2025-11-26 01:26:34,507 - __main__ - ERROR - Error loading initial data: Note.__init__() got an unexpected keyword argument 'content'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 170, in load_initial_data
+    note = Note(
+           ^^^^^
+TypeError: Note.__init__() got an unexpected keyword argument 'content'
+2025-11-26 01:26:59,857 - __main__ - ERROR - Error loading notes: Invalid column index delete
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 809, in load_notes_list
+    self.notes_list.set(item_id, 'delete', '\xd7')  # Using \xd7 as delete button text
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nik_s\AppData\Local\Programs\Python\Python311\Lib\tkinter\ttk.py", line 1434, in set
+    res = self.tk.call(self._w, "set", item, column, value)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_tkinter.TclError: Invalid column index delete
+2025-11-26 01:27:04,416 - __main__ - ERROR - Error loading notes: Invalid column index delete
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 809, in load_notes_list
+    self.notes_list.set(item_id, 'delete', '\xd7')  # Using \xd7 as delete button text
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\nik_s\AppData\Local\Programs\Python\Python311\Lib\tkinter\ttk.py", line 1434, in set
+    res = self.tk.call(self._w, "set", item, column, value)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_tkinter.TclError: Invalid column index delete
