@@ -1,0 +1,100 @@
+2025-11-26 00:02:11,967 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 712, in on_closing
+    self.db.close()
+    ^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:02:12,958 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 712, in on_closing
+    self.db.close()
+    ^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:05:35,433 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 712, in on_closing
+    self.db.close()
+    ^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:09:04,260 - __main__ - ERROR - Error loading topics: 'NoteTakingApp' object has no attribute 'topics_tree'
+2025-11-26 00:09:09,983 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 713, in on_closing
+    self.db.close()
+    ^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:10:09,315 - __main__ - ERROR - Error loading topics: 'NoteTakingApp' object has no attribute 'topics_tree'
+2025-11-26 00:10:23,634 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 716, in on_closing
+    self.db.close()
+    ^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:13:38,046 - __main__ - ERROR - Error loading notes: 'NoteTakingApp' object has no attribute 'notes_listbox'
+2025-11-26 00:13:43,194 - __main__ - CRITICAL - Failed to initialize application: string index out of range
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 140, in __init__
+    self.create_new_note()
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 550, in create_new_note
+    topic_id = self.topics_tree.item(selected_topic[0])['values'][0]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: string index out of range
+2025-11-26 00:15:22,838 - __main__ - ERROR - Error loading notes: 'NoteTakingApp' object has no attribute 'current_topic_id'
+2025-11-26 00:15:27,251 - __main__ - CRITICAL - Failed to initialize application: string index out of range
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 140, in __init__
+    self.create_new_note()
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 550, in create_new_note
+    topic_id = self.topics_tree.item(selected_topic[0])['values'][0]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: string index out of range
+2025-11-26 00:16:42,182 - __main__ - ERROR - Error loading notes: 'NoteTakingApp' object has no attribute 'update_status_bar'
+2025-11-26 00:16:49,555 - __main__ - CRITICAL - Failed to initialize application: string index out of range
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 141, in __init__
+    self.create_new_note()
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 551, in create_new_note
+    topic_id = self.topics_tree.item(selected_topic[0])['values'][0]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: string index out of range
+2025-11-26 00:17:35,261 - __main__ - CRITICAL - Failed to initialize application: string index out of range
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 141, in __init__
+    self.create_new_note()
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 584, in create_new_note
+    topic_id = self.topics_tree.item(selected_topic[0])['values'][0]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: string index out of range
+2025-11-26 00:18:15,390 - __main__ - CRITICAL - Failed to initialize application: 'NoteTakingApp' object has no attribute 'update_window_title'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 141, in __init__
+    self.create_new_note()
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 605, in create_new_note
+    self.clear_editor()
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 1067, in clear_editor
+    self.update_window_title()
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute 'update_window_title'
+2025-11-26 00:19:28,098 - database - ERROR - Error searching notes: DISTINCT aggregates must have exactly one argument
+2025-11-26 00:19:29,623 - __main__ - ERROR - Не удалось создать новую заметку: string index out of range
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 576, in create_new_note
+    self.save_current_note()
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 643, in save_current_note
+    topic_id = self.topics_tree.item(selected_topic[0])['values'][0]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: string index out of range
+2025-11-26 00:20:20,424 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 758, in on_closing
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:20:40,589 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 773, in on_closing
+    return
+        ^^
+AttributeError: 'DatabaseManager' object has no attribute 'close'
+2025-11-26 00:22:03,200 - __main__ - ERROR - Error during application shutdown: 'DatabaseManager' object has no attribute 'close'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\bloknot\tkinter_app.py", line 758, in on_closing
+AttributeError: 'DatabaseManager' object has no attribute 'close'
