@@ -509,3 +509,14 @@ Traceback (most recent call last):
     if parent_id not in self.tree.get_children() and note['topic_id'] not in topic_map:
                                                                              ^^^^^^^^^
 NameError: name 'topic_map' is not defined
+2025-11-26 23:48:50,967 - __main__ - CRITICAL - Fatal error: 'add'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1080, in main
+    app = NoteTakingApp(root)
+          ^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 128, in __init__
+    self.setup_ui()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 596, in setup_ui
+    label=f"{self.icons['add']} Новая тема",
+             ~~~~~~~~~~^^^^^^^
+KeyError: 'add'

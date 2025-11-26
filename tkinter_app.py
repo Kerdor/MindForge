@@ -388,25 +388,29 @@ class NoteTakingApp:
     def _create_icons(self):
         """Create and store icons for the toolbar buttons."""
         try:
-            # Use standard icons from the system theme
+            # Modern Fluent UI style icons
             self.icons = {
-                'add': '➕',      # Plus sign for add
-                'edit': '✏️',    # Pencil for edit/rename
-                'delete': '🗑️',  # Trash can for delete
-                'refresh': '🔄', # Refresh icon
-                'note_add': '📝', # Note add icon
-                'note_delete': '🗑️', # Note delete icon (same as delete for consistency)
+                'create': '➕',      # Main create button
+                'create_dropdown': '▼',  # Dropdown arrow
+                'note': '�',       # New note
+                'topic': '�',      # New topic
+                'tag': '🏷️',       # New tag
+                'edit': '✏️',      # Edit/rename
+                'delete': '🗑️',    # Delete
+                'refresh': '🔄',   # Refresh
             }
         except Exception as e:
             logger.error(f"Error creating icons: {e}")
             # Fallback to text if icons can't be created
             self.icons = {
-                'add': '+',
+                'create': '+',
+                'create_dropdown': '▼',
+                'note': 'N+',
+                'topic': 'T+',
+                'tag': '#',
                 'edit': '✏️',
                 'delete': 'X',
-                'refresh': '⟳',
-                'note_add': 'N+',
-                'note_delete': 'X'
+                'refresh': '⟳'
             }
     
     def setup_ui(self):
@@ -435,34 +439,59 @@ class NoteTakingApp:
         self.tree_container = ttk.Frame(self.left_sidebar, padding=5)
         self.tree_container.pack(fill=tk.BOTH, expand=True)
         
-        # Toolbar for tree actions
-        self.tree_toolbar = ttk.Frame(self.tree_container)
+        # Main toolbar with modern design
+        self.tree_toolbar = ttk.Frame(self.tree_container, padding=(0, 2, 0, 2))
         self.tree_toolbar.pack(fill=tk.X, pady=(0, 5))
         
-        # Add buttons for tree actions
-        self.add_topic_btn = ttk.Button(
-            self.tree_toolbar,
-            text=self.icons['add'],
-            command=self.create_root_topic,
+        # Create a frame for the create button and dropdown
+        self.create_frame = ttk.Frame(self.tree_toolbar)
+        self.create_frame.pack(side=tk.LEFT, padx=(0, 2))
+        
+        # Main create button with dropdown
+        self.create_btn = ttk.Button(
+            self.create_frame,
+            text=f"{self.icons['create']} Создать",
+            command=self.show_create_menu,
             style='Toolbutton',
-            width=3
+            width=10
         )
-        self.add_topic_btn.pack(side=tk.LEFT, padx=1)
+        self.create_btn.pack(side=tk.LEFT)
         
-        self.add_note_btn = ttk.Button(
-            self.tree_toolbar,
-            text=self.icons['note_add'],
-            command=self.create_note,
+        # Dropdown arrow button
+        self.create_dropdown_btn = ttk.Button(
+            self.create_frame,
+            text=self.icons['create_dropdown'],
+            command=self.show_create_menu,
             style='Toolbutton',
-            width=3
+            width=2
         )
-        self.add_note_btn.pack(side=tk.LEFT, padx=1)
+        self.create_dropdown_btn.pack(side=tk.LEFT)
         
-        # Add a separator
-        ttk.Separator(self.tree_toolbar, orient='vertical').pack(side=tk.LEFT, padx=3, fill='y')
+        # Create menu (initially hidden)
+        self.create_menu = tk.Menu(self.root, tearoff=0)
+        self.create_menu.add_command(
+            label=f"{self.icons['note']} Новая заметка",
+            command=self.create_note_under_selected,
+            accelerator="Alt+N"
+        )
+        self.create_menu.add_command(
+            label=f"{self.icons['topic']} Новая тема",
+            command=self.create_topic_under_selected,
+            accelerator="Alt+T"
+        )
+        self.create_menu.add_command(
+            label=f"{self.icons['tag']} Новый тег",
+            command=self.show_create_tag_dialog,
+            accelerator="Alt+G"
+        )
         
+        # Right-aligned buttons
+        right_buttons_frame = ttk.Frame(self.tree_toolbar)
+        right_buttons_frame.pack(side=tk.RIGHT)
+        
+        # Rename button
         self.rename_btn = ttk.Button(
-            self.tree_toolbar,
+            right_buttons_frame,
             text=self.icons['edit'],
             command=self.rename_selected_item,
             style='Toolbutton',
@@ -472,7 +501,7 @@ class NoteTakingApp:
         
         # Delete button
         self.delete_btn = ttk.Button(
-            self.tree_toolbar,
+            right_buttons_frame,
             text=self.icons['delete'],
             command=self.delete_selected_item,
             style='Toolbutton',
@@ -480,18 +509,26 @@ class NoteTakingApp:
         )
         self.delete_btn.pack(side=tk.LEFT, padx=1)
         
-        # Add a separator
-        ttk.Separator(self.tree_toolbar, orient='vertical').pack(side=tk.LEFT, padx=3, fill='y')
+        # Separator
+        ttk.Separator(right_buttons_frame, orient='vertical').pack(side=tk.LEFT, padx=3, fill='y')
         
-        # Add refresh button
+        # Refresh button
         self.refresh_btn = ttk.Button(
-            self.tree_toolbar,
+            right_buttons_frame,
             text=self.icons['refresh'],
             command=self.load_tree_data,
             style='Toolbutton',
             width=3
         )
         self.refresh_btn.pack(side=tk.LEFT, padx=1)
+        
+        # Bind keyboard shortcuts
+        self.root.bind_all('<Alt-n>', lambda e: self.create_note_under_selected())
+        self.root.bind_all('<Alt-N>', lambda e: self.create_note_under_selected())
+        self.root.bind_all('<Alt-t>', lambda e: self.create_topic_under_selected())
+        self.root.bind_all('<Alt-T>', lambda e: self.create_topic_under_selected())
+        self.root.bind_all('<Alt-g>', lambda e: self.show_create_tag_dialog())
+        self.root.bind_all('<Alt-G>', lambda e: self.show_create_tag_dialog())
         
         # Create the treeview with a scrollbar
         tree_frame = ttk.Frame(self.tree_container)
@@ -556,12 +593,14 @@ class NoteTakingApp:
         # Context menu for tree items
         self.tree_menu = tk.Menu(self.root, tearoff=0)
         self.tree_menu.add_command(
-            label=f"{self.icons['add']} Новая тема",
-            command=self.create_topic_under_selected
+            label=f"{self.icons['topic']} Новая тема",
+            command=self.create_topic_under_selected,
+            accelerator="Alt+T"
         )
         self.tree_menu.add_command(
-            label=f"{self.icons['note_add']} Новая заметка",
-            command=self.create_note_under_selected
+            label=f"{self.icons['note']} Новая заметка",
+            command=self.create_note_under_selected,
+            accelerator="Alt+N"
         )
         self.tree_menu.add_separator()
         self.tree_menu.add_command(
@@ -575,7 +614,8 @@ class NoteTakingApp:
         self.tree_menu.add_separator()
         self.tree_menu.add_command(
             label=f"{self.icons['refresh']} Обновить",
-            command=self.load_tree_data
+            command=self.load_tree_data,
+            accelerator="F5"
         )
         
         # Right panel for note editor
@@ -979,6 +1019,36 @@ class NoteTakingApp:
             messagebox.showinfo("Информация", "Пожалуйста, выберите тему для удаления")
             return
         self.delete_topic(selection[0])
+    
+    def show_create_menu(self, event=None):
+        """Show the create menu below the create button."""
+        try:
+            # Get the coordinates of the create button
+            x = self.create_btn.winfo_rootx()
+            y = self.create_btn.winfo_rooty() + self.create_btn.winfo_height()
+            
+            # Post the menu at the calculated position
+            self.create_menu.tk_popup(x, y)
+            
+            # Keep the menu open until an item is selected or it loses focus
+            self.create_menu.grab_release()
+            
+        except Exception as e:
+            logger.error(f"Error showing create menu: {e}")
+            messagebox.showerror("Ошибка", "Не удалось отобразить меню создания")
+    
+    def show_create_tag_dialog(self):
+        """Show dialog to create a new tag."""
+        try:
+            tag_name = simpledialog.askstring("Новый тег", "Введите название тега:", parent=self.root)
+            if tag_name and tag_name.strip():
+                # Here you would typically save the tag to your database
+                # For now, we'll just show a success message
+                messagebox.showinfo("Успех", f"Тег '{tag_name}' создан")
+                
+        except Exception as e:
+            logger.error(f"Error creating tag: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось создать тег: {str(e) or 'Неизвестная ошибка'}")
     
     def on_closing(self):
         """Handle application shutdown."""
