@@ -130,8 +130,9 @@ class NoteTakingApp:
         # Bind window close event
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         
-        # Load initial data
+        # Load initial data and render the tree
         self.load_initial_data()
+        self.load_tree_data()  # Ensure tree is rendered on startup
         
     def create_root_topic(self):
         """Create a new root-level topic."""
@@ -299,21 +300,39 @@ class NoteTakingApp:
             # First, ensure the database is properly initialized
             self._ensure_database_initialized()
             
-            # Load topics into the treeview
-            self.load_topics()
-            
-            # If there are no notes in the database, create a default note
-            notes = self.db.get_notes()
-            if not notes:
-                # Create a default topic if none exists
-                topics = self.db.get_topics()
-                if not topics:
-                    self.db.create_topic("Личное")
-                    topics = self.db.get_topics()  # Reload topics
-                    self.load_topics()  # Update the treeview
+            # Ensure we have the root topic and default subtopics
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
                 
-                # Create a welcome note if we have at least one topic
-                if topics:
+                # Check if root topic exists
+                cursor.execute("SELECT id FROM topics WHERE name = 'Темы'")
+                root_topic = cursor.fetchone()
+                
+                if not root_topic:
+                    # Create root topic
+                    cursor.execute(
+                        'INSERT INTO topics (name, parent_id) VALUES (?, ?)',
+                        ('Темы', None)
+                    )
+                    root_topic_id = cursor.lastrowid
+                    
+                    # Create default subtopics
+                    default_subtopics = ['Аниме', 'Фильмы', 'Работа', 'Личное']
+                    for subtopic in default_subtopics:
+                        cursor.execute(
+                            'INSERT INTO topics (name, parent_id) VALUES (?, ?)',
+                            (subtopic, root_topic_id)
+                        )
+                    
+                    conn.commit()
+                
+                # Check if we need to create a welcome note
+                cursor.execute("SELECT COUNT(*) FROM notes")
+                if cursor.fetchone()[0] == 0:  # No notes exist
+                    # Get the first topic ID
+                    cursor.execute("SELECT id FROM topics WHERE name = 'Личное'")
+                    topic_id = cursor.fetchone()[0]
+                    
                     welcome_content = """# Добро пожаловать в MindForge!
                     
 Это ваша первая заметка. Вы можете:
@@ -324,30 +343,37 @@ class NoteTakingApp:
 
 Начните с создания новой темы или добавления заметки."""
                     
-                    # Get the first topic ID
-                    note_id = self.db.create_note("Добро пожаловать", topics[0]['id'])
-                    
-                    # Create a note object with a text block containing the welcome content
-                    welcome_block = Block(
-                        type=BlockType.TEXT,
-                        content=welcome_content.strip()
+                    # Create welcome note
+                    cursor.execute(
+                        'INSERT INTO notes (title, topic_id) VALUES (?, ?)',
+                        ('Добро пожаловать', topic_id)
                     )
+                    note_id = cursor.lastrowid
                     
-                    # Create the note with the block
+                    # Save the note content
                     note = Note(
                         id=note_id,
                         title="Добро пожаловать",
-                        topic_id=topics[0]['id'],
-                        blocks=[welcome_block]
+                        topic_id=topic_id,
+                        blocks=[
+                            Block(
+                                type=BlockType.TEXT,
+                                content=welcome_content.strip()
+                            )
+                        ]
                     )
                     
                     # Save the note with the block
                     self.db.save_note(note)
-                    self.load_notes()  # Update the notes list
+                    conn.commit()
         
         except Exception as e:
             logger.error(f"Error loading initial data: {e}", exc_info=True)
-            messagebox.showerror("Ошибка", f"Не удалось загрузить начальные данные: {str(e) or 'Неизвестная ошибка'}")
+            messagebox.showerror("Ошибка", f"Не удалось загрузить начальные данные: {str(e) or 'Неизвестная ошиб'}")
+        finally:
+            # Ensure the tree is properly refreshed
+            if hasattr(self, 'tree'):
+                self.load_tree_data()
     
     def _ensure_database_initialized(self):
         """Ensure the database is properly initialized with required tables."""
@@ -490,13 +516,29 @@ class NoteTakingApp:
         # Configure the scrollbar
         tree_scroll.config(command=self.tree.yview)
         
-        # Configure treeview style to show arrows and icons
+        # Configure treeview style and appearance
         style = ttk.Style()
-        style.configure('Treeview', rowheight=28, font=('Segoe UI', 10))
+        style.configure('Treeview', 
+                       rowheight=28, 
+                       font=('Segoe UI', 10),
+                       indent=20)  # Add indentation for child items
         
-        # Set custom icons for folders and notes
-        self.tree.tag_configure('topic', image='📁')
-        self.tree.tag_configure('note', image='�')
+        # Set custom icons for folders and notes using emoji
+        self.tree.tag_configure('topic', font=('Segoe UI', 10, 'bold'))
+        self.tree.tag_configure('note', font=('Segoe UI', 10))
+        
+        # Set treeview to show tree lines and item images
+        style.configure("Treeview", 
+                       rowheight=28,
+                       font=('Segoe UI', 10),
+                       background="#ffffff",
+                       fieldbackground="#ffffff",
+                       foreground="#000000")
+        
+        # Style for treeview items on hover and selection
+        style.map('Treeview', 
+                 background=[('selected', '#0078d7')],
+                 foreground=[('selected', '#ffffff')])
         
         # Configure item padding and indentation
         style.configure('Treeview.Item', padding=(0, 3, 0, 3))
@@ -575,76 +617,112 @@ class NoteTakingApp:
         self.status_var.set("Готово")
     
     def load_tree_data(self):
-        """Load topics and notes into the tree."""
-        # Initialize topic map to store topic_id -> tree_item_id mapping
-        topic_map = {}
-        
+        """Load topics and notes into the tree with proper hierarchy and icons."""
+        if not hasattr(self, 'tree'):
+            return  # Tree not initialized yet
+            
         # Clear existing items
         for item in self.tree.get_children():
             self.tree.delete(item)
-            
+        
         try:
+            # Get or create root "Темы" topic
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id FROM topics WHERE name = 'Темы'")
+                root_topic = cursor.fetchone()
+                
+                if not root_topic:
+                    # Create root topic if it doesn't exist
+                    cursor.execute(
+                        'INSERT INTO topics (name, parent_id) VALUES (?, ?)',
+                        ('Темы', None)
+                    )
+                    root_topic_id = cursor.lastrowid
+                    
+                    # Create default subtopics
+                    default_subtopics = ['Аниме', 'Фильмы', 'Работа', 'Личное']
+                    for subtopic in default_subtopics:
+                        cursor.execute(
+                            'INSERT INTO topics (name, parent_id) VALUES (?, ?)',
+                            (subtopic, root_topic_id)
+                        )
+                    conn.commit()
+                    root_topic_id = root_topic_id  # Use the newly created ID
+                else:
+                    root_topic_id = root_topic[0]
+            
             # Get all topics and organize them by parent_id
             topics = self.db.get_topics()
             topics_by_parent = {}
+            topic_map = {}
             
             # First pass: organize topics by parent_id
             for topic in topics:
-                parent_id = topic.get('parent_id') or 0  # Use 0 for root topics
+                parent_id = topic.get('parent_id')
+                if parent_id is None:  # Root level topics
+                    parent_id = root_topic_id
+                
                 if parent_id not in topics_by_parent:
                     topics_by_parent[parent_id] = []
                 topics_by_parent[parent_id].append(topic)
             
-            # Second pass: add topics to the tree in BFS order
-            queue = [(0, '')]  # (parent_id, parent_item_id)
+            # Add root "Темы" topic with folder icon
+            root_item_id = f"topic_{root_topic_id}"
+            self.tree.insert(
+                '', 'end', 
+                iid=root_item_id, 
+                text='📁 Темы',
+                tags=('topic', 'root')
+            )
             
-            while queue:
-                current_parent_id, current_parent_item = queue.pop(0)
-                
-                # Get all children of the current parent
-                for topic in topics_by_parent.get(current_parent_id, []):
-                    item_id = f"topic_{topic['id']}"
-                    topic_map[topic['id']] = item_id
+            # Function to add topics recursively
+            def add_topics(parent_id, parent_item_id):
+                for topic in topics_by_parent.get(parent_id, []):
+                    if topic['id'] == root_topic_id:  # Skip root topic itself
+                        continue
+                        
+                    topic_id = f"topic_{topic['id']}"
+                    topic_map[topic['id']] = topic_id
                     
-                    # Insert the topic under its parent
                     self.tree.insert(
-                        current_parent_item if current_parent_item else '',
-                        'end',
-                        iid=item_id,
-                        text=topic['name'],
+                        parent_item_id, 'end',
+                        iid=topic_id,
+                        text=f"📁 {topic['name']}",
                         tags=('topic',)
                     )
                     
-                    # Add this topic's ID to the queue to process its children
-                    queue.append((topic['id'], item_id))
+                    # Recursively add subtopics
+                    add_topics(topic['id'], topic_id)
+            
+            # Add all topics under the root
+            add_topics(root_topic_id, root_item_id)
+            
+            # Add notes under their respective topics
+            notes = self.db.get_notes()
+            for note in notes:
+                if not note['topic_id']:
+                    continue  # Skip notes without a topic
                     
+                parent_id = f"topic_{note['topic_id']}"
+                if parent_id in self.tree.get_children() or note['topic_id'] in topic_map:
+                    self.tree.insert(
+                        parent_id, 'end',
+                        iid=f"note_{note['id']}",
+                        text=f"📄 {note['title']}",
+                        tags=('note',)
+                    )
+            
+            # Expand the root topic by default
+            self.tree.item(root_item_id, open=True)
+            
+            # Force update the tree view
+            self.tree.update_idletasks()
+            
         except Exception as e:
             logger.error(f"Error loading topic tree: {e}", exc_info=True)
             messagebox.showerror("Ошибка", f"Не удалось загрузить список тем: {e}")
             return
-        
-        # Third pass: add notes under their topics
-        notes = self.db.get_notes()
-        for note in notes:
-            if not note['topic_id']:
-                continue  # Skip notes without a topic
-                
-            parent_id = f"topic_{note['topic_id']}"
-            if parent_id not in self.tree.get_children() and note['topic_id'] not in topic_map:
-                continue  # Skip if parent topic doesn't exist
-                
-            item_id = f"note_{note['id']}"
-            self.tree.insert(
-                parent_id,
-                'end',
-                iid=item_id,
-                text=note['title'],
-                tags=('note',)
-            )
-        
-        # Expand all topics by default
-        for item_id in self.tree.get_children():
-            self.tree.item(item_id, open=True)
     
     def on_tree_select(self, event):
         """Handle selection of an item in the tree."""
