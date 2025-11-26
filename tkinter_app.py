@@ -122,7 +122,9 @@ class NoteTakingApp:
         # Initialize notes list
         self.notes = []
         self.current_topic_id = None
+        self.current_note_id = None
         
+        # Set up the UI
         self.setup_ui()
         
         # Bind window close event
@@ -131,6 +133,166 @@ class NoteTakingApp:
         # Load initial data
         self.load_initial_data()
         
+    def create_root_topic(self):
+        """Create a new root-level topic."""
+        name = simpledialog.askstring("Новая тема", "Введите название темы:")
+        if name and name.strip():
+            try:
+                topic_id = self.db.create_topic(name.strip())
+                self.load_topics()
+                self.status_var.set(f"Создана новая тема: {name}")
+            except Exception as e:
+                messagebox.showerror("Ошибка", f"Не удалось создать тему: {str(e)}")
+                logger.error(f"Error creating topic: {e}")
+
+    def create_subtopic(self, parent_id):
+        """Create a new subtopic under the specified parent."""
+        name = simpledialog.askstring("Новая подтема", "Введите название подтемы:")
+        if name and name.strip():
+            try:
+                topic_id = self.db.create_topic(name.strip(), parent_id)
+                self.load_topics()
+                self.status_var.set(f"Создана новая подтема: {name}")
+            except Exception as e:
+                messagebox.showerror("Ошибка", f"Не удалось создать подтему: {str(e)}")
+                logger.error(f"Error creating subtopic: {e}")
+
+    def show_topic_context_menu(self, event):
+        """Show context menu for topics."""
+        item = self.tree.identify('item', event.x, event.y)
+        if item:
+            self.tree.selection_set(item)
+            menu = tk.Menu(self.root, tearoff=0)
+            menu.add_command(label="Новая подтема", 
+                           command=lambda: self.create_subtopic(self.tree.item(item)['values'][0]))
+            menu.add_command(label="Переименовать", 
+                           command=lambda: self.rename_topic(item))
+            menu.add_separator()
+            menu.add_command(label="Удалить", 
+                           command=lambda: self.delete_topic(item))
+            menu.post(event.x_root, event.y_root)
+        else:
+            # Show root menu if right-clicked on empty space
+            self.topic_menu.post(event.x_root, event.y_root)
+
+    def create_note(self, topic_id=None):
+        """Create a new note in the current or specified topic."""
+        try:
+            # If topic_id is not provided, try to get it from selection
+            if topic_id is None:
+                selection = self.tree.selection()
+                if selection:
+                    item_id = selection[0]
+                    if item_id.startswith('topic_'):
+                        # Extract topic ID from the item ID
+                        topic_id = int(item_id.split('_')[1])
+            
+            # Create default note title with current date
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            default_title = f"Новая заметка {date_str}"
+            
+            try:
+                # Create the note
+                note_id = self.db.create_note(default_title, topic_id)
+                
+                # Refresh the tree to show the new note
+                self.load_tree_data()
+                
+                # Select the new note in the tree
+                note_item_id = f'note_{note_id}'
+                if self.tree.exists(note_item_id):
+                    # Expand the parent topic if it exists
+                    if topic_id is not None:
+                        topic_item_id = f'topic_{topic_id}'
+                        if self.tree.exists(topic_item_id):
+                            self.tree.item(topic_item_id, open=True)
+                    
+                    self.tree.selection_set(note_item_id)
+                    self.tree.see(note_item_id)
+                    self.load_note(note_id)
+                
+                # Set focus to title entry
+                self.title_entry.focus_set()
+                self.title_entry.select_range(0, tk.END)
+                
+                # Update status
+                self.status_var.set(f"Создана новая заметка: {default_title}")
+                
+                return note_id
+                
+            except Exception as db_error:
+                error_msg = str(db_error) or "Неизвестная ошибка базы данных"
+                logger.error(f"Database error creating note: {error_msg}", exc_info=True)
+                messagebox.showerror("Ошибка базы данных", f"Не удалось создать заметку: {error_msg}")
+                return None
+            
+        except Exception as e:
+            error_msg = str(e) or "Неизвестная ошибка"
+            logger.error(f"Error in create_note: {error_msg}", exc_info=True)
+            messagebox.showerror("Ошибка", f"Не удалось создать заметку: {error_msg}")
+            return None
+
+    def load_topics(self):
+        """Load topics into the treeview."""
+        try:
+            # Clear the tree
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+            
+            # Add root node
+            root_id = self.tree.insert("", "end", text="Темы", values=(-1,), open=True)
+            
+            # Get topics from database
+            topics = self.db.get_topics()
+            
+            # Create a dictionary to store topic nodes
+            topic_nodes = {-1: root_id}  # -1 is the ID for the root
+            
+            # First pass: create all topic nodes
+            for topic in topics:
+                parent_id = topic['parent_id'] if topic['parent_id'] is not None else -1
+                node_id = self.tree.insert(
+                    topic_nodes.get(parent_id, ""), 
+                    "end", 
+                    text=topic['name'], 
+                    values=(topic['id'],)
+                )
+                topic_nodes[topic['id']] = node_id
+            
+            # Expand all nodes
+            for node in self.tree.get_children():
+                self.tree.item(node, open=True)
+                
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось загрузить темы: {str(e)}")
+            logger.error(f"Error loading topics: {e}")
+
+    def load_notes(self, topic_id=None):
+        """Load notes for the selected topic."""
+        try:
+            self.current_topic_id = topic_id
+            # The tree view is already updated by load_tree_data()
+        except Exception as e:
+            error_msg = str(e) or "Неизвестная ошибка"
+            logger.error(f"Error loading notes: {error_msg}")
+            messagebox.showerror("Ошибка", f"Не удалось загрузить заметки: {error_msg}")
+            logger.error(f"Error loading notes: {e}")
+
+    def on_topic_selected(self, event):
+        """Handle topic selection change."""
+        selection = self.tree.selection()
+        if selection:
+            topic_id = self.tree.item(selection[0])['values'][0]
+            if topic_id != -1:  # Not the root "Themes" node
+                self.current_topic_id = topic_id
+                self.load_notes(topic_id)
+            else:
+                self.current_topic_id = None
+                self.load_notes()  # Load all notes
+        else:
+            self.current_topic_id = None
+            self.load_notes()  # Load all notes
+
     def load_initial_data(self):
         """Load initial data when the application starts."""
         try:
@@ -166,9 +328,6 @@ class NoteTakingApp:
                     note_id = self.db.create_note("Добро пожаловать", topics[0]['id'])
                     
                     # Create a note object with a text block containing the welcome content
-                    from models import Note, Block, BlockType
-                    
-                    # Create a text block with the welcome content
                     welcome_block = Block(
                         type=BlockType.TEXT,
                         content=welcome_content.strip()
@@ -184,7 +343,7 @@ class NoteTakingApp:
                     
                     # Save the note with the block
                     self.db.save_note(note)
-                    self.load_notes_list()  # Update the notes list
+                    self.load_notes()  # Update the notes list
         
         except Exception as e:
             logger.error(f"Error loading initial data: {e}", exc_info=True)
@@ -198,938 +357,592 @@ class NoteTakingApp:
         except Exception as e:
             logger.error(f"Database initialization error: {e}")
             # Try to reinitialize the database
-            try:
-                self.db._init_db()
-                logger.info("Database reinitialized successfully")
-            except Exception as init_error:
-                logger.error(f"Failed to reinitialize database: {init_error}")
-                raise DatabaseError("Не удалось инициализировать базу данных")
-        
+            self.db._init_db()
+    
+    def _create_icons(self):
+        """Create and store icons for the toolbar buttons."""
+        try:
+            # Use standard icons from the system theme
+            self.icons = {
+                'add': '➕',      # Plus sign for add
+                'edit': '✏️',    # Pencil for edit/rename
+                'delete': '🗑️',  # Trash can for delete
+                'refresh': '🔄', # Refresh icon
+                'note_add': '📝', # Note add icon
+                'note_delete': '🗑️', # Note delete icon (same as delete for consistency)
+            }
+        except Exception as e:
+            logger.error(f"Error creating icons: {e}")
+            # Fallback to text if icons can't be created
+            self.icons = {
+                'add': '+',
+                'edit': '✏️',
+                'delete': 'X',
+                'refresh': '⟳',
+                'note_add': 'N+',
+                'note_delete': 'X'
+            }
+    
     def setup_ui(self):
         """Set up the user interface."""
+        self.root.title("MindForge")
+        self.root.geometry("1200x800")
+        
+        # Create icons
+        self._create_icons()
+        
         # Configure styles
         self.style = ttk.Style()
-        self._setup_styles()
+        self.style.configure('Treeview', rowheight=25)
+        self.style.configure('Treeview.Heading', font=('Segoe UI', 10, 'bold'))
+        self.style.configure('Toolbutton', padding=3)
         
-        # Create main container
-        self.main_container = ttk.Frame(self.root)
+        # Main container
+        self.main_container = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
         self.main_container.pack(fill=tk.BOTH, expand=True)
         
-        # Initialize UI components
-        self._setup_sidebar()
-        self._setup_editor()
-        self._setup_status_bar()
-    
-    def _setup_styles(self):
-        """Configure custom styles for the application."""
-        self.style.configure('Sidebar.TFrame', background='#f0f0f0')
-        self.style.configure('Note.TFrame', background='white')
-        self.style.configure('Note.TLabel', font=('Segoe UI', 10), background='white')
-        self.style.configure('Note.Selected.TFrame', background='#e6f3ff')
-        self.style.configure('Delete.TButton', 
-                           font=('Arial', 10, 'bold'),
-                           foreground='white',
-                           background='#ff4444',
-                           borderwidth=0,
-                           width=2,
-                           padding=0)
-        self.style.map('Delete.TButton',
-                     background=[('active', '#ff6666'), ('!active', '#ff4444')],
-                     foreground=[('active', 'white'), ('!active', 'white')])
-
-    def _setup_sidebar(self):
-        """Set up the sidebar with topics and notes list."""
-        # Create sidebar frame
-        self.sidebar = ttk.Frame(self.main_container, width=250, style='Sidebar.TFrame')
-        self.sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
+        # Left sidebar
+        self.left_sidebar = ttk.Frame(self.main_container, width=250, padding=5)
+        self.main_container.add(self.left_sidebar, weight=0)
         
-        # Create a frame for the topics section
-        topics_frame = ttk.Frame(self.sidebar)
-        topics_frame.pack(fill=tk.X, pady=(0, 10))
+        # Main tree container
+        self.tree_container = ttk.Frame(self.left_sidebar, padding=5)
+        self.tree_container.pack(fill=tk.BOTH, expand=True)
         
-        # Add topics label and button
-        topics_header = ttk.Label(topics_frame, text="Темы", font=('Segoe UI', 10, 'bold'))
-        topics_header.pack(anchor='w')
+        # Toolbar for tree actions
+        self.tree_toolbar = ttk.Frame(self.tree_container)
+        self.tree_toolbar.pack(fill=tk.X, pady=(0, 5))
         
-        # Add button to create new topic
-        new_topic_btn = ttk.Button(
-            topics_frame,
-            text="+ Новая тема",
-            command=self.add_topic,
-            style='Accent.TButton',
-            width=15
+        # Add buttons for tree actions
+        self.add_topic_btn = ttk.Button(
+            self.tree_toolbar,
+            text=self.icons['add'],
+            command=self.create_root_topic,
+            style='Toolbutton',
+            width=3
         )
-        new_topic_btn.pack(fill=tk.X, pady=(5, 10))
+        self.add_topic_btn.pack(side=tk.LEFT, padx=1)
         
-        # Add topics tree
-        self.topics_tree = ttk.Treeview(topics_frame, show='tree', selectmode='browse')
-        self.topics_tree.pack(fill=tk.BOTH, expand=True)
-        
-        # Add notes section
-        notes_header_frame = ttk.Frame(self.sidebar)
-        notes_header_frame.pack(fill=tk.X, pady=(10, 5))
-        
-        notes_header = ttk.Label(notes_header_frame, text="Заметки", font=('Segoe UI', 10, 'bold'))
-        notes_header.pack(side=tk.LEFT)
-        
-        # Add button to create new note
-        new_note_btn = ttk.Button(
-            notes_header_frame,
-            text="+ Новая",
-            command=self.create_new_note,
-            style='Accent.TButton',
-            width=8
+        self.add_note_btn = ttk.Button(
+            self.tree_toolbar,
+            text=self.icons['note_add'],
+            command=self.create_note,
+            style='Toolbutton',
+            width=3
         )
-        new_note_btn.pack(side=tk.RIGHT)
+        self.add_note_btn.pack(side=tk.LEFT, padx=1)
         
-        # Add notes list container
-        self.notes_frame = ttk.Frame(self.sidebar)
-        self.notes_frame.pack(fill=tk.BOTH, expand=True)
+        # Add a separator
+        ttk.Separator(self.tree_toolbar, orient='vertical').pack(side=tk.LEFT, padx=3, fill='y')
         
-        # Create a Treeview for notes with three columns: title, date, and delete button
-        self.notes_list = ttk.Treeview(self.notes_frame, columns=('title', 'date', 'delete'), show='headings', selectmode='browse')
+        self.rename_btn = ttk.Button(
+            self.tree_toolbar,
+            text=self.icons['edit'],
+            command=self.rename_selected_item,
+            style='Toolbutton',
+            width=3
+        )
+        self.rename_btn.pack(side=tk.LEFT, padx=1)
         
-        # Configure columns
-        self.notes_list.heading('title', text='Название')
-        self.notes_list.column('title', width=180)
-        self.notes_list.heading('date', text='Дата')
-        self.notes_list.column('date', width=80)
-        self.notes_list.heading('delete', text='')
-        self.notes_list.column('delete', width=30, anchor='center')
+        # Delete button
+        self.delete_btn = ttk.Button(
+            self.tree_toolbar,
+            text=self.icons['delete'],
+            command=self.delete_selected_item,
+            style='Toolbutton',
+            width=3
+        )
+        self.delete_btn.pack(side=tk.LEFT, padx=1)
         
-        # Configure tag for delete button
-        self.notes_list.tag_configure('delete_btn', foreground='red', font=('Arial', 12, 'bold'))
+        # Add a separator
+        ttk.Separator(self.tree_toolbar, orient='vertical').pack(side=tk.LEFT, padx=3, fill='y')
         
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(self.notes_frame, orient=tk.VERTICAL, command=self.notes_list.yview)
-        self.notes_list.configure(yscroll=scrollbar.set)
+        # Add refresh button
+        self.refresh_btn = ttk.Button(
+            self.tree_toolbar,
+            text=self.icons['refresh'],
+            command=self.load_tree_data,
+            style='Toolbutton',
+            width=3
+        )
+        self.refresh_btn.pack(side=tk.LEFT, padx=1)
         
-        # Pack the list and scrollbar
-        self.notes_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # Create the treeview with a scrollbar
+        tree_frame = ttk.Frame(self.tree_container)
+        tree_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Create a scrollbar for the treeview
+        tree_scroll = ttk.Scrollbar(tree_frame)
+        tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Create the treeview with tree and headings visible
+        self.tree = ttk.Treeview(
+            tree_frame,
+            yscrollcommand=tree_scroll.set,
+            selectmode='browse',
+            show='tree',
+            height=20,
+            style='Treeview',
+            padding=(2, 2, 2, 2)
+        )
+        self.tree.pack(fill=tk.BOTH, expand=True)
+        
+        # Configure the scrollbar
+        tree_scroll.config(command=self.tree.yview)
+        
+        # Configure treeview style to show arrows and icons
+        style = ttk.Style()
+        style.configure('Treeview', rowheight=28, font=('Segoe UI', 10))
+        
+        # Set custom icons for folders and notes
+        self.tree.tag_configure('topic', image='📁')
+        self.tree.tag_configure('note', image='�')
+        
+        # Configure item padding and indentation
+        style.configure('Treeview.Item', padding=(0, 3, 0, 3))
+        
+        # Ensure the tree shows the expand/collapse arrows
+        style.layout('Treeview', [
+            ('Treeview.treearea', {'sticky': 'nswe'})  # Make sure the tree area is sticky in all directions
+        ])
         
         # Bind events
-        self.notes_list.bind('<<TreeviewSelect>>', self.on_note_selected)
+        self.tree.bind('<<TreeviewSelect>>', self.on_tree_select)
+        self.tree.bind('<Double-1>', self.on_tree_double_click)
+        self.tree.bind('<Button-3>', self.show_tree_context_menu)
         
-        # Initialize notes list
-        self.load_notes_list()
-
-    def _setup_editor(self):
-        """Set up the main editor area."""
-        self.editor_frame = ttk.Frame(self.main_container)
-        self.editor_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Add editor components here
-        self.editor = tk.Text(self.editor_frame, wrap=tk.WORD, font=('Segoe UI', 11))
-        self.editor.pack(fill=tk.BOTH, expand=True)
-
-    def _setup_status_bar(self):
-        """Set up the status bar."""
-        self.status_bar = ttk.Label(self.main_container, text="Готово", relief=tk.SUNKEN, anchor=tk.W)
-        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-
-    def on_closing(self):
-        """Handle application shutdown."""
-        try:
-            if hasattr(self, 'db') and self.db:
-                self.db.close()
-            self.root.destroy()
-        except Exception as e:
-            logger.error(f"Error during application shutdown: {e}")
-            self.root.destroy()
-
-    def render_notes_list(self, parent):
-        """Render the notes list with custom Frames and Buttons"""
-        # Create a frame for the notes list
-        notes_frame = ttk.Frame(parent, style='Sidebar.TFrame')
-        notes_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
-
-        # Create a label for the notes header
-        notes_header = ttk.Label(notes_frame, text="Заметки", font=('Segoe UI', 10, 'bold'))
-        notes_header.pack(fill=tk.X, pady=(0, 5))
-        
-        # Add button to create new note
-        new_note_btn = ttk.Button(
-            notes_frame,
-            text="+ Новая заметка",
-            command=self.create_new_note,
-            style='Accent.TButton'
+        # Context menu for tree items
+        self.tree_menu = tk.Menu(self.root, tearoff=0)
+        self.tree_menu.add_command(
+            label=f"{self.icons['add']} Новая тема",
+            command=self.create_topic_under_selected
         )
-        new_note_btn.pack(fill=tk.X, pady=(0, 5))
-
-        # Create a frame for the notes list container
-        notes_container = ttk.Frame(notes_frame)
-        notes_container.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
-
-        # Create a canvas and scrollbar for the notes list
-        canvas = tk.Canvas(notes_container, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(notes_container, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-
-        # Configure the canvas scrolling
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
-            )
+        self.tree_menu.add_command(
+            label=f"{self.icons['note_add']} Новая заметка",
+            command=self.create_note_under_selected
         )
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        # Pack the canvas and scrollbar
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-
-        # Bind mousewheel for scrolling
-        canvas.bind_all("<MouseWheel>", 
-                       lambda e: canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
-
-        # Store note widgets
-        self.note_widgets = {}
-        self.selected_note_id = None
-
-        # Create a frame for each note
-        for note in self.notes:
-            note_frame = ttk.Frame(scrollable_frame, style='Note.TFrame')
-            note_frame.pack(fill=tk.X, pady=(0, 1))
-
-            # Store note ID in the frame
-            note_id = note['id']
-            note_frame.note_id = note_id
-
-            # Create title label
-            title_text = note.get('title', 'Без названия')
-            title_label = ttk.Label(
-                note_frame, 
-                text=title_text,
-                style='Note.TLabel',
-                anchor='w'
-            )
-            title_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5, pady=2)
-
-            # Create date label
-            date_label = ttk.Label(
-                note_frame,
-                text=note['updated_at'],
-                style='Note.TLabel',
-                width=8
-            )
-            date_label.pack(side=tk.RIGHT, padx=5, pady=2)
-
-            # Create delete button
-            delete_btn = ttk.Button(
-                note_frame,
-                text='×',
-                style='Delete.TButton',
-                command=lambda nid=note_id: self.delete_note_with_confirmation(nid, title_text)
-            )
-            delete_btn.pack(side=tk.RIGHT, padx=(0, 5), pady=2)
-
-            # Store widgets for later reference
-            self.note_widgets[note_id] = {
-                'frame': note_frame,
-                'title': title_label,
-                'date': date_label,
-                'delete_btn': delete_btn
-            }
-
-            # Bind click events to the frame and labels
-            for widget in [note_frame, title_label, date_label]:
-                widget.bind('<Button-1>', lambda e, nid=note_id: self._on_note_click(nid))
-                widget.bind('<Enter>', lambda e, f=note_frame: f.configure(style='Note.Hover.TFrame' if f != self.selected_note_id else 'Note.Selected.TFrame'))
-                widget.bind('<Leave>', lambda e, f=note_frame: f.configure(style='Note.TFrame' if f != self.selected_note_id else 'Note.Selected.TFrame'))
-
-        # Configure hover style for the frame
-        self.style.configure('Note.Hover.TFrame', background='#f5f5f5')
-
-    def _on_note_click(self, note_id):
-        """Handle click on a note"""
-        self._select_note(note_id)
-        self.load_note(note_id)
-
-    def _select_note(self, note_id):
-        """Select a note in the list"""
-        # Reset style of previously selected note
-        if self.selected_note_id and self.selected_note_id in self.note_widgets:
-            self.note_widgets[self.selected_note_id]['frame'].configure(style='Note.TFrame')
-
-        # Set new selection
-        self.selected_note_id = note_id
-        if note_id in self.note_widgets:
-            self.note_widgets[note_id]['frame'].configure(style='Note.Selected.TFrame')
-            messagebox.showerror("Ошибка", f"Не удалось удалить заметку: {e}")
-
-    def rename_note(self, note_id: int, current_title: str) -> None:
-        """Rename a note"""
-        new_title = RenameDialog.show(
-            self.root,
-            "Переименовать заметку",
-            "Введите новое название заметки:",
-            current_title
+        self.tree_menu.add_separator()
+        self.tree_menu.add_command(
+            label=f"{self.icons['edit']} Переименовать",
+            command=self.rename_selected_item
+        )
+        self.tree_menu.add_command(
+            label=f"{self.icons['delete']} Удалить",
+            command=self.delete_selected_item
+        )
+        self.tree_menu.add_separator()
+        self.tree_menu.add_command(
+            label=f"{self.icons['refresh']} Обновить",
+            command=self.load_tree_data
         )
         
-        if not new_title or new_title == current_title:
-            return
-            
-        try:
-            with self.db._get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    'UPDATE notes SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-                    (new_title.strip(), note_id)
-                )
-                conn.commit()
-                
-                # Update the notes list
-                self.load_notes_list()
-                
-        except Exception as e:
-            logger.error(f"Error renaming note: {e}")
-            messagebox.showerror("Ошибка", f"Не удалось переименовать заметку: {e}")
-
-    def move_note_to_topic(self, note_id: int) -> None:
-        """Move a note to a different topic"""
-        # Get current note
-        note = self.db.get_note(note_id)
-        if not note:
-            messagebox.showerror("Ошибка", "Заметка не найдена")
-            return
-            
-        # Show topic selection dialog
-        from dialogs import TopicSelectionDialog
-        topic_id = TopicSelectionDialog.show(
-            self.root,
-            "Выберите тему",
-            self.db,
-            current_topic_id=note.topic_id
+        # Right panel for note editor
+        self.right_panel = ttk.Frame(self.main_container, padding=5)
+        self.main_container.add(self.right_panel, weight=1)
+        
+        # Note title
+        self.note_title_var = tk.StringVar()
+        self.title_entry = ttk.Entry(
+            self.right_panel, 
+            textvariable=self.note_title_var,
+            font=('Segoe UI', 14, 'bold')
         )
+        self.title_entry.pack(fill=tk.X, pady=(0, 10))
+        self.title_entry.bind('<KeyRelease>', self.on_title_changed)
+        self.title_entry.bind('<Return>', self.on_title_changed)
         
-        if topic_id is None:
-            return  # User cancelled
-            
-        try:
-            # Update the note's topic
-            with self.db._get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    'UPDATE notes SET topic_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-                    (topic_id if topic_id != 0 else None, note_id)
-                )
-                conn.commit()
-                
-                # Update the notes list
-                self.load_notes_list()
-                
-        except Exception as e:
-            logger.error(f"Error moving note: {e}")
-            messagebox.showerror("Ошибка", f"Не удалось переместить заметку: {e}")
-
-    def delete_selected_note(self) -> None:
-        """Delete the currently selected note"""
-        if not hasattr(self, 'note_ids') or not self.note_ids:
-            return
-            
-        # Get selected note
-        selection = self.notes_list.selection()
-        if not selection:
-            return
-            
-        note_index = selection[0]
-        if note_index >= len(self.note_ids):
-            return
-            
-        note_id = self.note_ids[note_index]
-        note_title = self.notes_list.item(selection[0], 'values')[0].split(' [')[0]  # Remove topic from title
-        
-        # Show confirmation and delete
-        self.delete_note_with_confirmation(note_id, note_title)
-
-    def update_window_title(self, title: str = None):
-        """Update the window title with the current note's title.
-        
-        Args:
-            title: Optional title to set. If None, uses the current title_var value.
-        """
-        if title is None:
-            title = self.title_var.get()
-        self.root.title(f"MindForge - {title}" if title else "MindForge")
-
-    def clear_editor(self):
-        # Clear all blocks
-        self.blocks = []
-        self.current_note_id = None
-        self.title_var.set("")
-        self.update_window_title("")
-        self.render_blocks()
-
-    def _setup_styles(self):
-        """Configure custom styles for the application"""
-        style = ttk.Style()
-        
-        # Configure Treeview
-        style.configure("Treeview", 
-                       font=('Segoe UI', 10), 
-                       rowheight=25,
-                       borderwidth=0,
-                       relief='flat')
-        
-        style.configure("Treeview.Item", 
-                       padding=(5, 2, 5, 2))
-        
-        style.map('Treeview',
-                 background=[('selected', '#e1e1e1')],
-                 foreground=[('selected', 'black')])
-        
-        # Configure buttons
-        style.configure('Accent.TButton',
-                      font=('Segoe UI', 9, 'bold'))
-        
-        style.configure('Danger.TButton',
-                      font=('Segoe UI', 12, 'bold'),
-                      foreground='#dc3545',
-                      background='#f8f9fa',
-                      borderwidth=0,
-                      padding=0,
-                      width=2)
-        
-        style.map('Danger.TButton',
-                foreground=[('active', '#ffffff'), ('!active', '#dc3545')],
-                background=[('active', '#dc3545'), ('!active', '#f8f9fa')])
-        
-        # Configure listbox
-        style.configure('Listbox',
-                      font=('Segoe UI', 10),
-                      selectbackground='#e1e1e1',
-                      selectforeground='black',
-                      borderwidth=0,
-                      highlightthickness=0)
-
-    def load_topics(self):
-        """Load topics into the treeview"""
-        try:
-            # Clear existing items
-            for item in self.topics_tree.get_children():
-                self.topics_tree.delete(item)
-            
-            # Add root node (always expanded)
-            root_id = self.topics_tree.insert('', 'end', text='📁 Темы', open=True, tags=('root',))
-            
-            # Add topics from database
-            topics = self.db.get_topics_tree()
-            self._add_topics_to_tree(root_id, topics)
-            
-            # Add a default topic if no topics exist
-            if not self.topics_tree.get_children():
-                default_topic_id = self.db.create_topic("Личное")
-                topics = self.db.get_topics_tree()
-                self._add_topics_to_tree(root_id, topics)
-            
-            # Select the root node by default to show all notes
-            self.topics_tree.selection_set(root_id)
-            self.topics_tree.focus(root_id)
-            
-            # Update notes list
-            self.load_notes_list()
-                
-        except Exception as e:
-            logger.error(f"Error loading topics: {e}")
-            messagebox.showerror("Ошибка", f"Не удалось загрузить темы: {e}")
-
-    def add_topic(self, parent_id: Optional[int] = None) -> None:
-        """Add a new topic (or subtopic if parent_id is provided)"""
-        # Show dialog to get topic name
-        topic_name = RenameDialog.show(
-            self.root,
-            "Новая тема",
-            "Введите название темы:",
-            ""
+        # Note content
+        self.note_content = tk.Text(
+            self.right_panel, 
+            wrap=tk.WORD,
+            font=('Segoe UI', 11),
+            padx=5,
+            pady=5
         )
+        self.note_content.pack(fill=tk.BOTH, expand=True)
         
-        if not topic_name or not topic_name.strip():
-            return
-            
-        try:
-            # If parent_id is not provided, try to get the selected topic
-            if parent_id is None:
-                selected = self.topics_tree.selection()
-                if selected:
-                    item = selected[0]
-                    values = self.topics_tree.item(item, 'values')
-                    if values and values[0]:
-                        parent_id = values[0]
-            
-            # Add the new topic to the database
-            topic_id = self.db.create_topic(topic_name.strip(), parent_id)
-            
-            # Reload topics to update the tree
-            self.load_topics()
-            
-            # Select the new topic
-            self._select_topic_in_tree(topic_id)
-            
-        except Exception as e:
-            logger.error(f"Error adding topic: {e}")
-            messagebox.showerror("Ошибка", f"Не удалось добавить тему: {e}")
-
-    def create_new_note(self):
-        """Create a new note in the currently selected topic"""
-        if not self.current_topic_id:
-            messagebox.showwarning("Не выбрана тема", "Пожалуйста, выберите тему для новой заметки")
-            return
-            
-        # Create a new note with default title
-        note_id = self.db.create_note("Новая заметка", "", self.current_topic_id)
-        if note_id:
-            # Reload notes to show the new one
-            self.load_notes_list()
-            # Select the new note
-            self._on_note_click(note_id)
-
-    def _select_topic_in_tree(self, topic_id: int) -> bool:
-        """Select a topic in the treeview by ID"""
-        for item in self.topics_tree.get_children():
-            values = self.topics_tree.item(item, 'values')
-            if values and values[0] == topic_id:
-                self.topics_tree.selection_set(item)
-                self.topics_tree.focus(item)
-                return True
-                
-            # Check children recursively
-            if self._select_topic_in_children(item, topic_id):
-                return True
-                
-        return False
-    
-    def _select_topic_in_children(self, parent_item, topic_id: int) -> bool:
-        """Recursively find and select a topic in the treeview"""
-        for item in self.topics_tree.get_children(parent_item):
-            values = self.topics_tree.item(item, 'values')
-            if values and values[0] == topic_id:
-                # Expand parent to make the item visible
-                self.topics_tree.item(parent_item, open=True)
-                self.topics_tree.selection_set(item)
-                self.topics_tree.focus(item)
-                return True
-                
-            # Check children
-            if self._select_topic_in_children(item, topic_id):
-                self.topics_tree.item(parent_item, open=True)
-                return True
-                
-        return False
-
-    def _add_topics_to_tree(self, parent_id, topics):
-        """Add topics recursively to the treeview"""
-        for topic in topics:
-            topic_id = self.topics_tree.insert(
-                parent_id,
-                'end',
-                text=topic['name'],
-                values=(topic['id'],)
-            )
-            
-            if topic.get('children'):
-                self._add_topics_to_tree(topic_id, topic['children'])
-
-    def on_topic_selected(self, event=None):
-        """Handle topic selection in the treeview"""
-        selected_items = self.topics_tree.selection()
-        if not selected_items:
-            return
-            
-        selected_item = selected_items[0]
-        item_values = self.topics_tree.item(selected_item, 'values')
-        
-        # Check if root node is selected (show all notes)
-        if 'root' in self.topics_tree.item(selected_item, 'tags'):
-            self.current_topic_id = None
-        elif item_values and item_values[0]:
-            self.current_topic_id = item_values[0]
-        else:
-            self.current_topic_id = None
-        
-        self.load_notes_list()
-        
-    def on_note_selected(self, event):
-        """Handle note selection in the notes list"""
-        selected_items = self.notes_list.selection()
-        if not selected_items:
-            return
-            
-        selected_item = selected_items[0]
-        item_values = self.notes_list.item(selected_item, 'values')
-        
-        if item_values:
-            note_title = item_values[0]
-            self.status_var.set(f"Выбрана заметка: {note_title}")
-            
-            # Here you would load the note content into the editor
-            # For now, we'll just update the status bar
-            # Example: self.load_note_content(note_id)
-
-    def load_notes_list(self):
-        """Load notes for the selected topic into the listbox with delete buttons"""
-        try:
-            # Store current selection
-            selected_note_id = None
-            selection = self.notes_list.selection()
-            if selection:
-                selected_item = selection[0]
-                if hasattr(self, 'note_ids') and self.notes_list.index(selected_item) < len(self.note_ids):
-                    selected_note_id = self.note_ids[self.notes_list.index(selected_item)]
-            
-            # Clear existing items
-            for item in self.notes_list.get_children():
-                self.notes_list.delete(item)
-            self.note_ids = []
-            
-            # Get notes for the selected topic (or all notes if no topic selected)
-            notes = self.db.load_notes(self.current_topic_id)
-            
-            # Add notes to the listbox with topic indicator and delete button
-            for note in notes:
-                # Get topic name if exists
-                topic_name = ""
-                if note.get('topic_id'):
-                    topic = self._get_topic_by_id(note['topic_id'])
-                    if topic:
-                        topic_name = f" [{topic['name']}]"
-                
-                # Add to listbox with note ID stored in tags
-                item_id = self.notes_list.insert(
-                    '', 'end', 
-                    values=(f"{note['title']}{topic_name}", note['created_at']),
-                    tags=(str(note['id']),)  # Store note ID in tags
-                )
-                
-                # Store note ID for reference
-                self.note_ids.append(note['id'])
-                
-                # Set delete button text in the delete column
-                self.notes_list.set(item_id, 'delete', '×')  # Using × as delete button text
-                self.notes_list.item(item_id, tags=('delete_btn',))
-                
-                # Restore selection if this was the selected note
-                if selected_note_id == note['id']:
-                    self.notes_list.selection_set(item_id)
-            
-            # Update status bar
-            self.update_status_bar(f"Заметок: {len(notes)}")
-            
-        except Exception as e:
-            logger.error(f"Error loading notes: {e}", exc_info=True)
-            messagebox.showerror("Ошибка", f"Не удалось загрузить заметки: {e}")
-
-    def update_status_bar(self, message: str):
-        """Update the status bar with the given message"""
-        if hasattr(self, 'status_var'):
-            self.status_var.set(message)
-            self.status_bar.update()
-
-    def _get_topic_by_id(self, topic_id: int) -> Optional[Dict]:
-        """Get topic by ID from the treeview"""
-        for item in self.topics_tree.get_children():
-            values = self.topics_tree.item(item, 'values')
-            if values and values[0] == topic_id:
-                return {'id': values[0], 'name': self.topics_tree.item(item, 'text')}
-            
-            # Check children recursively
-            child_topic = self._find_topic_in_children(item, topic_id)
-            if child_topic:
-                return child_topic
-                
-        return None
-    
-    def _find_topic_in_children(self, parent_item, topic_id: int) -> Optional[Dict]:
-        """Recursively find a topic in the treeview"""
-        for item in self.topics_tree.get_children(parent_item):
-            values = self.topics_tree.item(item, 'values')
-            if values and values[0] == topic_id:
-                return {'id': values[0], 'name': self.topics_tree.item(item, 'text')}
-                
-            # Check children
-            child_topic = self._find_topic_in_children(item, topic_id)
-            if child_topic:
-                return child_topic
-                
-        return None
-
-def main():
-    try:
-        root = tk.Tk()
-        
-        # Configure the application style
-        style = ttk.Style()
-        style.theme_use("clam")  # Use a modern theme
-        
-        # Configure colors
-        style.configure("TFrame", background="#ffffff")
-        style.configure("TButton", padding=6)
-        style.configure("TEntry", padding=5)
-        
-        # Set application icon if available
-        try:
-            root.iconbitmap("icon.ico")
-        except:
-            pass
-        
-        # Set minimum window size
-        root.minsize(800, 500)
-        
-        # Center the window
-        window_width = 1200
-        window_height = 700
-        screen_width = root.winfo_screenwidth()
-        screen_height = root.winfo_screenheight()
-        x = (screen_width // 2) - (window_width // 2)
-        y = (screen_height // 2) - (window_height // 2)
-        root.geometry(f'{window_width}x{window_height}+{x}+{y}')
-        
-        # Create and run the application
-        app = NoteTakingApp(root)
-        root.mainloop()
-        
-    except Exception as e:
-        logger.critical(f"Fatal error: {str(e)}", exc_info=True)
-        messagebox.showerror("Fatal Error", 
-                          f"A fatal error occurred: {str(e)}\n\n"
-                          "Check app_errors.log for more details.")
-        if 'root' in locals():
-            root.destroy()
-
-        
-    def _setup_logging(self):
-        """Set up logging configuration."""
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            filename='app_errors.log',
-            filemode='w'
-        )
-        
-    def _setup_window(self):
-        """Configure the main window properties."""
-        self.root.title("MindForge")
-        
-        # Set application icon if available
-        try:
-            self.root.iconbitmap("icon.ico")
-        except Exception as e:
-            logger.warning(f"Could not load icon: {e}")
-        
-        # Set minimum window size and center it
-        self.root.minsize(800, 500)
-        window_width = 1200
-        window_height = 700
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        x = (screen_width // 2) - (window_width // 2)
-        y = (screen_height // 2) - (window_height // 2)
-        self.root.geometry(f'{window_width}x{window_height}+{x}+{y}')
-        
-        # Bind window close event
-        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-    
-    def _init_database(self):
-        """Initialize the database connection."""
-        try:
-            self.db = DatabaseManager()
-        except Exception as e:
-            logger.critical(f"Failed to initialize database: {e}")
-            messagebox.showerror("Database Error", 
-                              "Failed to initialize database.\n\n"
-                              "Check app_errors.log for details.")
-            self.root.quit()
-    
-    def setup_ui(self):
-        """Set up the user interface."""
-        try:
-            # Configure styles
-            self.style = ttk.Style()
-            self._setup_styles()
-            
-            # Create main container
-            self.main_container = ttk.Frame(self.root)
-            self.main_container.pack(fill=tk.BOTH, expand=True)
-            
-            # Initialize UI components
-            self._setup_sidebar()
-            self._setup_editor()
-            self._setup_status_bar()
-            
-        except Exception as e:
-            logger.critical(f"UI setup failed: {e}")
-            messagebox.showerror("UI Error", 
-                              "Failed to initialize the user interface.\n\n"
-                              "Check app_errors.log for details.")
-            self.root.quit()
-    
-    def _setup_styles(self):
-        """Configure custom styles for the application."""
-        try:
-            self.style.theme_use('default')
-            self.style.configure('.', font=('Segoe UI', 10))
-            
-            # Configure frame styles
-            self.style.configure('Sidebar.TFrame', background='#f0f0f0')
-            self.style.configure('Note.TFrame', background='white')
-            self.style.configure('Note.TLabel', font=('Segoe UI', 10), background='white')
-            self.style.configure('Note.Selected.TFrame', background='#e6f3ff')
-            
-            # Configure button styles
-            self.style.configure('Delete.TButton', 
-                               font=('Arial', 10, 'bold'),
-                               foreground='white',
-                               background='#ff4444',
-                               borderwidth=0,
-                               width=2,
-                               padding=0)
-            self.style.map('Delete.TButton',
-                         background=[('active', '#ff6666'), ('!active', '#ff4444')],
-                         foreground=[('active', 'white'), ('!active', 'white')])
-            
-        except Exception as e:
-            logger.error(f"Failed to set up styles: {e}")
-            # Continue with default styles
-    
-    def _setup_sidebar(self):
-        """Set up the sidebar with topics and notes list."""
-        try:
-            # Create sidebar frame
-            self.sidebar = ttk.Frame(self.main_container, width=250, style='Sidebar.TFrame')
-            self.sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
-            
-            # Add topics list
-            self.topics_list = ttk.Treeview(self.sidebar, show='tree', selectmode='browse')
-            self.topics_list.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
-            
-            # Add notes list
-            self.notes_frame = ttk.Frame(self.sidebar)
-            self.notes_frame.pack(fill=tk.BOTH, expand=True)
-            self.render_notes_list(self.notes_frame)
-            
-        except Exception as e:
-            logger.error(f"Failed to set up sidebar: {e}")
-            raise
-    
-    def _setup_editor(self):
-        """Set up the main editor area."""
-        try:
-            self.editor_frame = ttk.Frame(self.main_container)
-            self.editor_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
-            
-            # Add editor components here
-            self.editor = tk.Text(self.editor_frame, wrap=tk.WORD, font=('Segoe UI', 11))
-            self.editor.pack(fill=tk.BOTH, expand=True)
-            
-        except Exception as e:
-            logger.error(f"Failed to set up editor: {e}")
-            raise
-    
-    def load_notes_list(self):
-        """Load notes into the notes list."""
-        try:
-            # Clear existing items
-            for item in self.notes_list.get_children():
-                self.notes_list.delete(item)
-            
-            # Get notes from database
-            notes = self.db.get_notes()
-            
-            # Add notes to the list
-            for note in notes:
-                self.notes_list.insert('', 'end', values=(
-                    note.get('title', 'Без названия'),
-                    note.get('created_at', '')
-                ))
-                
-        except Exception as e:
-            logger.error(f"Error loading notes: {e}")
-            messagebox.showerror("Ошибка", f"Не удалось загрузить заметки: {e}")
-    
-    def on_note_selected(self, event):
-        """Handle note selection."""
-        selected = self.notes_list.selection()
-        if not selected:
-            return
-            
-        # Get the selected note
-        item = self.notes_list.item(selected[0])
-        note_title = item['values'][0]
-        
-        # Here you would load the note content into the editor
-        # For now, we'll just update the status bar
-        self.status_var.set(f"Выбрана заметка: {note_title}")
-        
-    def _setup_status_bar(self):
-        """Set up the status bar."""
+        # Status bar
         self.status_var = tk.StringVar()
         self.status_bar = ttk.Label(
-            self.root,
+            self.root, 
             textvariable=self.status_var,
             relief=tk.SUNKEN,
             anchor=tk.W
         )
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-        self.status_var.set("Готово")
         
+        # Set initial status
+        self.status_var.set("Готово")
+    
+    def load_tree_data(self):
+        """Load topics and notes into the tree."""
+        # Initialize topic map to store topic_id -> tree_item_id mapping
+        topic_map = {}
+        
+        # Clear existing items
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+            
+        try:
+            # Get all topics and organize them by parent_id
+            topics = self.db.get_topics()
+            topics_by_parent = {}
+            
+            # First pass: organize topics by parent_id
+            for topic in topics:
+                parent_id = topic.get('parent_id') or 0  # Use 0 for root topics
+                if parent_id not in topics_by_parent:
+                    topics_by_parent[parent_id] = []
+                topics_by_parent[parent_id].append(topic)
+            
+            # Second pass: add topics to the tree in BFS order
+            queue = [(0, '')]  # (parent_id, parent_item_id)
+            
+            while queue:
+                current_parent_id, current_parent_item = queue.pop(0)
+                
+                # Get all children of the current parent
+                for topic in topics_by_parent.get(current_parent_id, []):
+                    item_id = f"topic_{topic['id']}"
+                    topic_map[topic['id']] = item_id
+                    
+                    # Insert the topic under its parent
+                    self.tree.insert(
+                        current_parent_item if current_parent_item else '',
+                        'end',
+                        iid=item_id,
+                        text=topic['name'],
+                        tags=('topic',)
+                    )
+                    
+                    # Add this topic's ID to the queue to process its children
+                    queue.append((topic['id'], item_id))
+                    
+        except Exception as e:
+            logger.error(f"Error loading topic tree: {e}", exc_info=True)
+            messagebox.showerror("Ошибка", f"Не удалось загрузить список тем: {e}")
+            return
+        
+        # Third pass: add notes under their topics
+        notes = self.db.get_notes()
+        for note in notes:
+            if not note['topic_id']:
+                continue  # Skip notes without a topic
+                
+            parent_id = f"topic_{note['topic_id']}"
+            if parent_id not in self.tree.get_children() and note['topic_id'] not in topic_map:
+                continue  # Skip if parent topic doesn't exist
+                
+            item_id = f"note_{note['id']}"
+            self.tree.insert(
+                parent_id,
+                'end',
+                iid=item_id,
+                text=note['title'],
+                tags=('note',)
+            )
+        
+        # Expand all topics by default
+        for item_id in self.tree.get_children():
+            self.tree.item(item_id, open=True)
+    
+    def on_tree_select(self, event):
+        """Handle selection of an item in the tree."""
+        selected = self.tree.selection()
+        if not selected:
+            return
+            
+        item_id = selected[0]
+        if item_id.startswith('note_'):
+            # It's a note
+            note_id = int(item_id.split('_')[1])
+            self.load_note(note_id)
+    
+    def on_tree_double_click(self, event):
+        """Handle double-click on a tree item."""
+        region = self.tree.identify_region(event.x, event.y)
+        if region != 'cell':
+            return
+            
+        item_id = self.tree.identify_row(event.y)
+        if not item_id:
+            return
+            
+        if item_id.startswith('topic_'):
+            # Toggle expand/collapse
+            if self.tree.item(item_id, 'open'):
+                self.tree.item(item_id, open=False)
+            else:
+                self.tree.item(item_id, open=True)
+    
+    def show_tree_context_menu(self, event):
+        """Show the context menu for the tree."""
+        item_id = self.tree.identify_row(event.y)
+        if item_id:
+            self.tree.selection_set(item_id)
+            self.tree_menu.post(event.x_root, event.y_root)
+    
+    def create_topic_under_selected(self):
+        """Create a new topic under the selected one."""
+        selected = self.tree.selection()
+        parent_id = None
+        
+        if selected:
+            item_id = selected[0]
+            if item_id.startswith('topic_'):
+                parent_id = int(item_id.split('_')[1])
+        
+        name = simpledialog.askstring("Новая тема", "Введите название темы:")
+        if name and name.strip():
+            try:
+                self.db.create_topic(name.strip(), parent_id)
+                self.load_tree_data()
+                self.status_var.set(f"Создана новая тема: {name}")
+            except Exception as e:
+                error_msg = str(e) or "Неизвестная ошибка"
+                logger.error(f"Error creating topic: {error_msg}")
+                messagebox.showerror("Ошибка", f"Не удалось создать тему: {error_msg}")
+    
+    def create_note_under_selected(self):
+        """Create a new note under the selected topic."""
+        try:
+            selected = self.tree.selection()
+            topic_id = None
+            
+            if selected:
+                item_id = selected[0]
+                if item_id.startswith('topic_'):
+                    topic_id = int(item_id.split('_')[1])
+            
+            # Create default note title with current date
+            date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+            default_title = f"Новая заметка {date_str}"
+            
+            # Create the note
+            note_id = self.db.create_note(default_title, topic_id)
+            
+            if not note_id:
+                raise Exception("Не удалось создать заметку")
+            
+            # Refresh the tree to show the new note
+            self.load_tree_data()
+            
+            # Select and focus the new note
+            note_item_id = f'note_{note_id}'
+            if self.tree.exists(note_item_id):
+                # Expand parent topic if it exists
+                if topic_id is not None:
+                    topic_item_id = f'topic_{topic_id}'
+                    if self.tree.exists(topic_item_id):
+                        self.tree.item(topic_item_id, open=True)
+                
+                self.tree.selection_set(note_item_id)
+                self.tree.see(note_item_id)
+                self.load_note(note_id)
+            
+            # Set focus to title entry
+            self.title_entry.focus_set()
+            self.title_entry.select_range(0, tk.END)
+            
+            self.status_var.set(f"Создана новая заметка: {default_title}")
+            
+        except Exception as e:
+            error_msg = str(e) or "Неизвестная ошибка"
+            logger.error(f"Error creating note: {error_msg}", exc_info=True)
+            messagebox.showerror("Ошибка", f"Не удалось создать заметку: {error_msg}")
+    
+    def rename_selected_item(self):
+        """Rename the selected topic or note."""
+        selected = self.tree.selection()
+        if not selected:
+            return
+            
+        item_id = selected[0]
+        current_name = self.tree.item(item_id, 'text')
+        
+        new_name = simpledialog.askstring("Переименовать", "Введите новое название:", initialvalue=current_name)
+        if new_name and new_name.strip() and new_name != current_name:
+            try:
+                if item_id.startswith('topic_'):
+                    topic_id = int(item_id.split('_')[1])
+                    self.db.rename_topic(topic_id, new_name.strip())
+                elif item_id.startswith('note_'):
+                    note_id = int(item_id.split('_')[1])
+                    self.db.update_note_title(note_id, new_name.strip())
+                
+                self.load_tree_data()
+                self.status_var.set("Элемент переименован")
+            except Exception as e:
+                error_msg = str(e) or "Неизвестная ошибка"
+                logger.error(f"Error renaming item: {error_msg}")
+                messagebox.showerror("Ошибка", f"Не удалось переименовать: {error_msg}")
+    
+    def delete_selected_item(self):
+        """Delete the selected topic or note."""
+        selected = self.tree.selection()
+        if not selected:
+            return
+            
+        item_id = selected[0]
+        item_name = self.tree.item(item_id, 'text')
+        
+        if messagebox.askyesno("Подтверждение удаления", 
+                             f"Вы уверены, что хотите удалить '{item_name}'?"):
+            try:
+                if item_id.startswith('topic_'):
+                    topic_id = int(item_id.split('_')[1])
+                    self.db.delete_topic(topic_id)
+                elif item_id.startswith('note_'):
+                    note_id = int(item_id.split('_')[1])
+                    self.db.delete_note(note_id)
+                
+                self.load_tree_data()
+                self.status_var.set("Элемент удалён")
+                
+                # Clear the editor if the deleted item was being edited
+                if hasattr(self, 'current_note_id') and \
+                   ((item_id.startswith('note_') and int(item_id.split('_')[1]) == self.current_note_id) or
+                    (item_id.startswith('topic_') and hasattr(self, 'current_topic_id') and 
+                     int(item_id.split('_')[1]) == self.current_topic_id)):
+                    self.note_content.delete('1.0', tk.END)
+                    self.note_title_var.set("")
+                    self.current_note_id = None
+                    if hasattr(self, 'current_topic_id'):
+                        delattr(self, 'current_topic_id')
+                        
+            except Exception as e:
+                error_msg = str(e) or "Неизвестная ошибка"
+                logger.error(f"Error deleting item: {error_msg}")
+                messagebox.showerror("Ошибка", f"Не удалось удалить: {error_msg}")
+    
+    def on_title_changed(self, event=None):
+        """Handle changes to the note title."""
+        if not hasattr(self, 'current_note_id') or not self.current_note_id:
+            return
+            
+        try:
+            # Get the new title from the entry widget
+            new_title = self.note_title_var.get().strip()
+            
+            # Don't save empty titles
+            if not new_title:
+                return
+                
+            # Update the note title in the database
+            success = self.db.update_note_title(self.current_note_id, new_title)
+            
+            if success:
+                # Update the tree to reflect the title change
+                note_item_id = f"note_{self.current_note_id}"
+                if self.tree.exists(note_item_id):
+                    self.tree.item(note_item_id, text=new_title)
+                
+                # Update the status bar
+                self.status_var.set(f"Заметка сохранена: {new_title}")
+                logger.info(f"Note {self.current_note_id} title updated to: {new_title}")
+            else:
+                logger.error(f"Failed to update note {self.current_note_id} title")
+                self.status_var.set("Ошибка при сохранении заголовка")
+                
+        except Exception as e:
+            error_msg = str(e) or "Неизвестная ошибка"
+            logger.error(f"Error saving note title: {error_msg}", exc_info=True)
+            self.status_var.set("Ошибка при сохранении заголовка")
+            messagebox.showerror("Ошибка", f"Не удалось обновить заголовок заметки: {error_msg}")
+                
+    def load_note(self, note_id):
+        """Load a note's content into the editor."""
+        try:
+            # Get the note from the database
+            note = self.db.get_note(note_id)
+            if note:
+                # Update the title entry
+                self.note_title_var.set(note.title)
+                
+                # Clear the content area
+                self.note_content.delete('1.0', tk.END)
+                
+                # If the note has content, insert it into the text widget
+                if hasattr(note, 'content') and note.content:
+                    self.note_content.insert('1.0', note.content)
+                
+                # Update status
+                self.status_var.set(f"Заметка загружена: {note.title}")
+                
+        except Exception as e:
+            error_msg = str(e) or "Неизвестная ошибка"
+            logger.error(f"Error loading note {note_id}: {error_msg}", exc_info=True)
+            messagebox.showerror("Ошибка", f"Не удалось загрузить заметку: {error_msg}")
+    
+    def on_note_selected(self, event=None):
+        """Handle note selection from the tree."""
+        selected = self.tree.selection()
+        if not selected:
+            return
+            
+        item_id = selected[0]
+        if item_id.startswith('note_'):
+            note_id = int(item_id.split('_')[1])
+            self.current_note_id = note_id
+            self.load_note(note_id)
+    
+    def rename_selected_topic(self):
+        """Handle rename button click for the selected topic."""
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showinfo("Информация", "Пожалуйста, выберите тему для переименования")
+            return
+        self.rename_topic(selection[0])
+        
+    def delete_selected_topic(self):
+        """Handle delete button click for the selected topic."""
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showinfo("Информация", "Пожалуйста, выберите тему для удаления")
+            return
+        self.delete_topic(selection[0])
+    
     def on_closing(self):
         """Handle application shutdown."""
         try:
-            if hasattr(self, 'db') and self.db:
+            # Save any unsaved changes
+            if hasattr(self, 'current_note_id') and self.current_note_id:
                 try:
-                    self.db.close()
+                    content = self.note_content.get('1.0', tk.END).strip()
+                    self.db.update_note_content(self.current_note_id, content)
                 except Exception as e:
-                    logger.error(f"Error closing database: {e}")
+                    logger.error(f"Error saving note before exit: {e}")
             
-            # Unbind all events to prevent further callbacks
-            for widget in [self.root] + self.root.winfo_children():
-                try:
-                    widget.unbind_all('<<ThemeChanged>>')
-                except:
-                    pass
-            
-            # Destroy the root window
-            self.root.quit()
-            
+            # Close the database connection
+            if hasattr(self, 'db'):
+                self.db.close()
+                
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
-            self.root.quit()
+            
+        finally:
+            # Always destroy the root window
+            self.root.destroy()
+
 
 def main():
-    # Set up logging
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        filename='app_errors.log',
-        filemode='w'
-    )
-    
-    # Create the main window
-    root = tk.Tk()
-    root.title("MindForge")
-    
-    # Set application icon if available
+    """Main entry point for the application."""
     try:
-        root.iconbitmap("icon.ico")
-    except:
-        pass
-    
-    # Set minimum window size
-    root.minsize(800, 500)
-    
-    # Center the window
-    window_width = 1200
-    window_height = 700
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-    x = (screen_width // 2) - (window_width // 2)
-    y = (screen_height // 2) - (window_height // 2)
-    root.geometry(f'{window_width}x{window_height}+{x}+{y}')
-    
-    # Create and run the application
-    app = NoteTakingApp(root)
-    root.mainloop()
+        # Create the root window
+        root = tk.Tk()
+        
+        # Create and run the application
+        app = NoteTakingApp(root)
+        
+        # Start the main event loop
+        root.mainloop()
+        
+    except Exception as e:
+        logger.critical(f"Fatal error: {e}", exc_info=True)
+        messagebox.showerror("Критическая ошибка", 
+                           f"Произошла критическая ошибка: {str(e)}\n\n"
+                           "Проверьте файл app_errors.log для получения дополнительной информации.")
+
 
 if __name__ == "__main__":
     main()

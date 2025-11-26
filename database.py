@@ -5,7 +5,7 @@ import os
 import json
 import logging
 from dataclasses import asdict
-from models import Block, BlockType, BlockItem
+from models import Block, BlockType, BlockItem, Note
 
 # Set up logging
 logging.basicConfig(level=logging.ERROR, 
@@ -187,6 +187,40 @@ class DatabaseManager:
                         parent['children'].append(topic_map[topic['id']])
             
             return root_topics
+            
+    def rename_topic(self, topic_id: int, new_name: str) -> bool:
+        """
+        Rename a topic.
+        
+        Args:
+            topic_id: ID of the topic to rename
+            new_name: New name for the topic
+            
+        Returns:
+            bool: True if the topic was renamed successfully, False otherwise
+            
+        Raises:
+            DatabaseError: If there was an error renaming the topic
+        """
+        if not new_name or not new_name.strip():
+            raise ValueError("Topic name cannot be empty")
+            
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    'UPDATE topics SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                    (new_name.strip(), topic_id)
+                )
+                conn.commit()
+                return cursor.rowcount > 0
+            except sqlite3.IntegrityError as e:
+                if "UNIQUE constraint failed" in str(e):
+                    raise DatabaseError("A topic with this name already exists")
+                raise DatabaseError(f"Failed to rename topic: {e}")
+            except sqlite3.Error as e:
+                logger.error(f"Error renaming topic {topic_id} to '{new_name}': {e}")
+                raise DatabaseError(f"Failed to rename topic: {e}")
     
     # Note operations
     def create_note(self, title: str, topic_id: Optional[int] = None) -> int:
@@ -419,6 +453,77 @@ class DatabaseManager:
         except sqlite3.Error as e:
             logger.error(f"Error getting note {note_id}: {e}")
             raise DatabaseError(f"Failed to retrieve note: {e}")
+    
+    def update_note(self, note: 'Note') -> bool:
+        """Update an existing note in the database.
+        
+        Args:
+            note: The Note object with updated data
+            
+        Returns:
+            bool: True if the update was successful, False otherwise
+        """
+        if not note.id:
+            logger.error("Cannot update note: no ID provided")
+            return False
+            
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(''' 
+                    UPDATE notes 
+                    SET title = ?, content = ?, topic_id = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (note.title, note.content, note.topic_id, note.id))
+                
+                if cursor.rowcount == 0:
+                    logger.warning(f"No note found with ID {note.id} to update")
+                    return False
+                    
+                conn.commit()
+                return True
+                
+        except sqlite3.Error as e:
+            logger.error(f"Error updating note: {e}")
+            raise DatabaseError(f"Failed to update note: {e}")
+            
+    def update_note_title(self, note_id: int, new_title: str) -> bool:
+        """Update only the title of a note.
+        
+        Args:
+            note_id: The ID of the note to update
+            new_title: The new title for the note
+            
+        Returns:
+            bool: True if the update was successful, False otherwise
+        """
+        if not note_id:
+            logger.error("Cannot update note: no ID provided")
+            return False
+            
+        if not new_title or not new_title.strip():
+            logger.error("Cannot update note: empty title")
+            return False
+            
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(''' 
+                    UPDATE notes 
+                    SET title = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (new_title.strip(), note_id))
+                
+                if cursor.rowcount == 0:
+                    logger.warning(f"No note found with ID {note_id} to update")
+                    return False
+                    
+                conn.commit()
+                return True
+                
+        except sqlite3.Error as e:
+            logger.error(f"Error updating note title: {e}")
+            raise DatabaseError(f"Failed to update note title: {e}")
     
     # Tag operations
     def add_tag(self, name: str) -> int:

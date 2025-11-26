@@ -360,3 +360,152 @@ Traceback (most recent call last):
     res = self.tk.call(self._w, "set", item, column, value)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _tkinter.TclError: Invalid column index delete
+2025-11-26 09:42:02,199 - __main__ - ERROR - Error saving note before exit: 'DatabaseManager' object has no attribute 'update_note_content'
+2025-11-26 22:45:14,168 - __main__ - ERROR - Error renaming topic: 'DatabaseManager' object has no attribute 'rename_topic'
+2025-11-26 22:45:35,415 - __main__ - ERROR - Error renaming topic: 'DatabaseManager' object has no attribute 'rename_topic'
+2025-11-26 22:50:40,305 - __main__ - ERROR - Error saving note before exit: 'DatabaseManager' object has no attribute 'update_note_content'
+2025-11-26 22:52:59,259 - __main__ - CRITICAL - Fatal error: 'NoteTakingApp' object has no attribute 'delete_selected_note'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 632, in main
+    app = NoteTakingApp(root)
+          ^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 128, in __init__
+    self.setup_ui()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 507, in setup_ui
+    command=self.delete_selected_note,
+            ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute 'delete_selected_note'
+2025-11-26 22:53:34,333 - __main__ - CRITICAL - Fatal error: 'NoteTakingApp' object has no attribute 'load_notes'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 656, in main
+    app = NoteTakingApp(root)
+          ^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 128, in __init__
+    self.setup_ui()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 521, in setup_ui
+    command=self.load_notes,
+            ^^^^^^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute 'load_notes'
+2025-11-26 22:56:05,373 - __main__ - ERROR - Error loading notes: 'NoteTakingApp' object has no attribute 'notes_listbox'
+2025-11-26 22:56:08,173 - __main__ - ERROR - Error creating note: 'NoteTakingApp' object has no attribute 'notes_listbox'
+2025-11-26 22:58:45,867 - __main__ - ERROR - Error creating note: 'NoteTakingApp' object has no attribute 'load_notes_list'
+2025-11-26 23:00:16,781 - __main__ - ERROR - Error creating note: 'DatabaseManager' object has no attribute 'get_all_notes'
+2025-11-26 23:00:57,037 - __main__ - ERROR - Error creating note: 'NoteTakingApp' object has no attribute 'load_note'
+2025-11-26 23:01:06,893 - __main__ - ERROR - Error creating note: 'NoteTakingApp' object has no attribute 'load_note'
+2025-11-26 23:01:12,932 - __main__ - ERROR - Error creating note: 'NoteTakingApp' object has no attribute 'load_note'
+2025-11-26 23:01:56,748 - __main__ - ERROR - Error loading note 10: name 'Note' is not defined
+2025-11-26 23:01:56,750 - __main__ - ERROR - Error loading note 10: name 'Note' is not defined
+2025-11-26 23:09:58,643 - __main__ - ERROR - Error loading note 11: name 'Note' is not defined
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 735, in load_note
+    note_data = self.db.get_note(note_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\nik_s\Documents\MindForge\database.py", line 404, in get_note
+    note = Note(
+           ^^^^
+NameError: name 'Note' is not defined
+2025-11-26 23:09:58,645 - __main__ - ERROR - Error loading note 11: name 'Note' is not defined
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 735, in load_note
+    note_data = self.db.get_note(note_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\nik_s\Documents\MindForge\database.py", line 404, in get_note
+    note = Note(
+           ^^^^
+NameError: name 'Note' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 735, in load_note
+    note_data = self.db.get_note(note_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\nik_s\Documents\MindForge\database.py", line 404, in get_note
+    note = Note(
+           ^^^^
+NameError: name 'Note' is not defined
+2025-11-26 23:10:52,325 - __main__ - ERROR - Error loading note 12: name 'Note' is not defined
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 736, in load_note
+    note_data = self.db.get_note(note_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\nik_s\Documents\MindForge\database.py", line 404, in get_note
+    note = Note(
+           ^^^^
+NameError: name 'Note' is not defined
+2025-11-26 23:10:52,328 - __main__ - ERROR - Error loading note 12: name 'Note' is not defined
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 736, in load_note
+    note_data = self.db.get_note(note_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\nik_s\Documents\MindForge\database.py", line 404, in get_note
+    note = Note(
+           ^^^^
+NameError: name 'Note' is not defined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 736, in load_note
+    note_data = self.db.get_note(note_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\nik_s\Documents\MindForge\database.py", line 404, in get_note
+    note = Note(
+           ^^^^
+NameError: name 'Note' is not defined
+2025-11-26 23:10:56,601 - __main__ - ERROR - Error loading note 2: name 'Note' is not defined
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 736, in load_note
+    note_data = self.db.get_note(note_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\nik_s\Documents\MindForge\database.py", line 404, in get_note
+    note = Note(
+           ^^^^
+NameError: name 'Note' is not defined
+2025-11-26 23:11:01,569 - __main__ - ERROR - Error loading note 1: name 'Note' is not defined
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 736, in load_note
+    note_data = self.db.get_note(note_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\nik_s\Documents\MindForge\database.py", line 404, in get_note
+    note = Note(
+           ^^^^
+NameError: name 'Note' is not defined
+2025-11-26 23:12:08,827 - __main__ - ERROR - Error loading note 13: 'Note' object has no attribute 'get'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 739, in load_note
+    self.note_title_var.set(note_data.get('title', ''))
+                            ^^^^^^^^^^^^^
+AttributeError: 'Note' object has no attribute 'get'
+2025-11-26 23:12:08,829 - __main__ - ERROR - Error loading note 13: 'Note' object has no attribute 'get'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 739, in load_note
+    self.note_title_var.set(note_data.get('title', ''))
+                            ^^^^^^^^^^^^^
+AttributeError: 'Note' object has no attribute 'get'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 739, in load_note
+    self.note_title_var.set(note_data.get('title', ''))
+                            ^^^^^^^^^^^^^
+AttributeError: 'Note' object has no attribute 'get'
+2025-11-26 23:16:48,748 - __main__ - ERROR - Error creating note: string index out of range
+2025-11-26 23:17:02,123 - __main__ - ERROR - Error creating note: string index out of range
+2025-11-26 23:17:55,697 - __main__ - ERROR - Error creating note: 'NoteTakingApp' object has no attribute 'note_title_entry'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 210, in create_note
+    self.note_title_entry.focus_set()
+    ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoteTakingApp' object has no attribute 'note_title_entry'
+2025-11-26 23:17:57,930 - __main__ - ERROR - Error creating note: 'NoteTakingApp' object has no attribute 'note_title_entry'
+2025-11-26 23:21:25,019 - __main__ - ERROR - Error renaming item: 'DatabaseManager' object has no attribute 'update_note_title'
+2025-11-26 23:28:51,920 - __main__ - ERROR - Database error creating note: name 'topic_map' is not defined
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 199, in create_note
+    self.load_tree_data()
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 626, in load_tree_data
+    if parent_id not in self.tree.get_children() and note['topic_id'] not in topic_map:
+                                                                             ^^^^^^^^^
+NameError: name 'topic_map' is not defined
