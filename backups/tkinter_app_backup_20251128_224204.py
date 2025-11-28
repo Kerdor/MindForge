@@ -516,18 +516,12 @@ class NoteTakingApp:
         self.refresh_btn.pack(side=tk.LEFT, padx=1)
         
         # Bind keyboard shortcuts
-        self.root.bind_all('<Control-n>', lambda e: self.create_note_under_selected())
-        self.root.bind_all('<Control-N>', lambda e: self.create_note_under_selected())
-        self.root.bind_all('<Control-t>', lambda e: self.create_topic_under_selected())
-        self.root.bind_all('<Control-T>', lambda e: self.create_topic_under_selected())
-        self.root.bind_all('<Control-g>', lambda e: self.show_create_tag_dialog())
-        self.root.bind_all('<Control-G>', lambda e: self.show_create_tag_dialog())
-        
-        # Add more common shortcuts
-        self.root.bind_all('<Control-s>', lambda e: self.save_current_note() if hasattr(self, 'save_current_note') else None)
-        self.root.bind_all('<Control-S>', lambda e: self.save_current_note() if hasattr(self, 'save_current_note') else None)
-        self.root.bind_all('<Control-q>', lambda e: self.on_closing())
-        self.root.bind_all('<Control-Q>', lambda e: self.on_closing())
+        self.root.bind_all('<Alt-n>', lambda e: self.create_note_under_selected())
+        self.root.bind_all('<Alt-N>', lambda e: self.create_note_under_selected())
+        self.root.bind_all('<Alt-t>', lambda e: self.create_topic_under_selected())
+        self.root.bind_all('<Alt-T>', lambda e: self.create_topic_under_selected())
+        self.root.bind_all('<Alt-g>', lambda e: self.show_create_tag_dialog())
+        self.root.bind_all('<Alt-G>', lambda e: self.show_create_tag_dialog())
         
         # Create the treeview with a scrollbar
         tree_frame = ttk.Frame(self.tree_container)

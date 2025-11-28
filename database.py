@@ -524,6 +524,40 @@ class DatabaseManager:
         except sqlite3.Error as e:
             logger.error(f"Error updating note title: {e}")
             raise DatabaseError(f"Failed to update note title: {e}")
+            
+    def update_note_content(self, note_id: int, content: str) -> bool:
+        """Update only the content of a note.
+        
+        Args:
+            note_id: The ID of the note to update
+            content: The new content for the note
+            
+        Returns:
+            bool: True if the update was successful, False otherwise
+        """
+        if not note_id:
+            logger.error("Cannot update note: no ID provided")
+            return False
+            
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(''' 
+                    UPDATE notes 
+                    SET content = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (content, note_id))
+                
+                if cursor.rowcount == 0:
+                    logger.warning(f"No note found with ID {note_id} to update")
+                    return False
+                    
+                conn.commit()
+                return True
+                
+        except sqlite3.Error as e:
+            logger.error(f"Error updating note content: {e}")
+            raise DatabaseError(f"Failed to update note content: {e}")
     
     # Tag operations
     def add_tag(self, name: str) -> int:

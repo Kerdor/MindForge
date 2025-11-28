@@ -443,19 +443,51 @@ class NoteTakingApp:
         self.tree_toolbar = ttk.Frame(self.tree_container, padding=(0, 2, 0, 2))
         self.tree_toolbar.pack(fill=tk.X, pady=(0, 5))
         
+        # Create a frame for the create button and dropdown
+        self.create_frame = ttk.Frame(self.tree_toolbar)
+        self.create_frame.pack(side=tk.LEFT, padx=(0, 2))
+        
+        # Main create button with dropdown
+        self.create_btn = ttk.Button(
+            self.create_frame,
+            text=f"{self.icons['create']} Создать",
+            command=self.show_create_menu,
+            style='Toolbutton',
+            width=10
+        )
+        self.create_btn.pack(side=tk.LEFT)
+        
+        # Dropdown arrow button
+        self.create_dropdown_btn = ttk.Button(
+            self.create_frame,
+            text=self.icons['create_dropdown'],
+            command=self.show_create_menu,
+            style='Toolbutton',
+            width=2
+        )
+        self.create_dropdown_btn.pack(side=tk.LEFT)
+        
+        # Create menu (initially hidden)
+        self.create_menu = tk.Menu(self.root, tearoff=0)
+        self.create_menu.add_command(
+            label=f"{self.icons['note']} Новая заметка",
+            command=self.create_note_under_selected,
+            accelerator="Alt+N"
+        )
+        self.create_menu.add_command(
+            label=f"{self.icons['topic']} Новая тема",
+            command=self.create_topic_under_selected,
+            accelerator="Alt+T"
+        )
+        self.create_menu.add_command(
+            label=f"{self.icons['tag']} Новый тег",
+            command=self.show_create_tag_dialog,
+            accelerator="Alt+G"
+        )
+        
         # Right-aligned buttons
         right_buttons_frame = ttk.Frame(self.tree_toolbar)
         right_buttons_frame.pack(side=tk.RIGHT)
-        
-        # Create button with just the + icon (moved next to edit button)
-        self.create_btn = ttk.Button(
-            right_buttons_frame,
-            text=self.icons['create'],
-            command=self.show_create_menu,
-            style='Toolbutton',
-            width=3  # Increased from 2 to 3 to prevent cutoff
-        )
-        self.create_btn.pack(side=tk.LEFT, padx=(0, 2))  # Added right padding
         
         # Rename button
         self.rename_btn = ttk.Button(
@@ -464,20 +496,6 @@ class NoteTakingApp:
             command=self.rename_selected_item,
             style='Toolbutton',
             width=3
-        )
-        self.rename_btn.pack(side=tk.LEFT, padx=1)
-        
-        # Create menu (initially hidden)
-        self.create_menu = tk.Menu(self.root, tearoff=0)
-        self.create_menu.add_command(
-            label=f"📄 Новая заметка",
-            command=self.create_note_under_selected,
-            accelerator="Alt+N"
-        )
-        self.create_menu.add_command(
-            label=f"📁 Новая тема",
-            command=self.create_topic_under_selected,
-            accelerator="Alt+T"
         )
         self.rename_btn.pack(side=tk.LEFT, padx=1)
         
@@ -494,17 +512,6 @@ class NoteTakingApp:
         # Separator
         ttk.Separator(right_buttons_frame, orient='vertical').pack(side=tk.LEFT, padx=3, fill='y')
         
-        # Toggle expand/collapse button
-        self.toggle_expand_btn = ttk.Button(
-            right_buttons_frame,
-            text='▼',  # Default to collapse (down arrow)
-            command=self.toggle_expand_all,
-            style='Toolbutton',
-            width=2
-        )
-        self.toggle_expand_btn.pack(side=tk.LEFT, padx=1)
-        self.all_expanded = False  # Track the current state
-        
         # Refresh button
         self.refresh_btn = ttk.Button(
             right_buttons_frame,
@@ -516,18 +523,12 @@ class NoteTakingApp:
         self.refresh_btn.pack(side=tk.LEFT, padx=1)
         
         # Bind keyboard shortcuts
-        self.root.bind_all('<Control-n>', lambda e: self.create_note_under_selected())
-        self.root.bind_all('<Control-N>', lambda e: self.create_note_under_selected())
-        self.root.bind_all('<Control-t>', lambda e: self.create_topic_under_selected())
-        self.root.bind_all('<Control-T>', lambda e: self.create_topic_under_selected())
-        self.root.bind_all('<Control-g>', lambda e: self.show_create_tag_dialog())
-        self.root.bind_all('<Control-G>', lambda e: self.show_create_tag_dialog())
-        
-        # Add more common shortcuts
-        self.root.bind_all('<Control-s>', lambda e: self.save_current_note() if hasattr(self, 'save_current_note') else None)
-        self.root.bind_all('<Control-S>', lambda e: self.save_current_note() if hasattr(self, 'save_current_note') else None)
-        self.root.bind_all('<Control-q>', lambda e: self.on_closing())
-        self.root.bind_all('<Control-Q>', lambda e: self.on_closing())
+        self.root.bind_all('<Alt-n>', lambda e: self.create_note_under_selected())
+        self.root.bind_all('<Alt-N>', lambda e: self.create_note_under_selected())
+        self.root.bind_all('<Alt-t>', lambda e: self.create_topic_under_selected())
+        self.root.bind_all('<Alt-T>', lambda e: self.create_topic_under_selected())
+        self.root.bind_all('<Alt-g>', lambda e: self.show_create_tag_dialog())
+        self.root.bind_all('<Alt-G>', lambda e: self.show_create_tag_dialog())
         
         # Create the treeview with a scrollbar
         tree_frame = ttk.Frame(self.tree_container)
@@ -621,8 +622,16 @@ class NoteTakingApp:
         self.right_panel = ttk.Frame(self.main_container, padding=5)
         self.main_container.add(self.right_panel, weight=1)
         
-        # Note title variable (kept for compatibility)
+        # Note title
         self.note_title_var = tk.StringVar()
+        self.title_entry = ttk.Entry(
+            self.right_panel, 
+            textvariable=self.note_title_var,
+            font=('Segoe UI', 14, 'bold')
+        )
+        self.title_entry.pack(fill=tk.X, pady=(0, 10))
+        self.title_entry.bind('<KeyRelease>', self.on_title_changed)
+        self.title_entry.bind('<Return>', self.on_title_changed)
         
         # Note content
         self.note_content = tk.Text(
@@ -647,103 +656,14 @@ class NoteTakingApp:
         # Set initial status
         self.status_var.set("Готово")
     
-    def toggle_expand_all(self):
-        """Toggle between expanding and collapsing all topics."""
-        if not hasattr(self, 'tree'):
-            return
-            
-        # Toggle the state
-        self.all_expanded = not self.all_expanded
-        
-        # Update button text based on the new state
-        self.toggle_expand_btn.config(text='▲' if self.all_expanded else '▼')
-        
-        # Function to recursively set open state for all subtopics
-        def set_subtree_state(parent_id, is_open):
-            for child_id in self.tree.get_children(parent_id):
-                if 'topic' in self.tree.item(child_id, 'tags'):
-                    self.tree.item(child_id, open=is_open)
-                    set_subtree_state(child_id, is_open)
-        
-        # Process all root-level topics
-        for item in self.tree.get_children(''):
-            if 'topic' in self.tree.item(item, 'tags'):
-                self.tree.item(item, open=self.all_expanded)
-                # Always update all children to match the parent's state
-                set_subtree_state(item, self.all_expanded)
-        
-        # Update status bar
-        action = "развернуты" if self.all_expanded else "свернуты"
-        self.status_var.set(f"Все темы {action}")
-        
-        # Force update the tree view to ensure all changes are visible
-        self.tree.update_idletasks()
-    
-    def collapse_all_topics(self):
-        """Collapse all topics in the tree, including all subtopics."""
-        if not hasattr(self, 'tree'):
-            return
-            
-        self.all_expanded = False
-        if hasattr(self, 'toggle_expand_btn'):
-            self.toggle_expand_btn.config(text='▼')
-        
-        # Function to recursively collapse all subtopics
-        def collapse_recursive(parent_id):
-            for child_id in self.tree.get_children(parent_id):
-                if 'topic' in self.tree.item(child_id, 'tags'):
-                    # First collapse all children
-                    collapse_recursive(child_id)
-                    # Then collapse the current topic
-                    self.tree.item(child_id, open=False)
-        
-        # Start with root items
-        for item in self.tree.get_children(''):
-            if 'topic' in self.tree.item(item, 'tags'):
-                # First collapse all children
-                collapse_recursive(item)
-                # Then collapse the root topic
-                self.tree.item(item, open=False)
-        
-        self.status_var.set("Все темы свернуты")
-        self.tree.update_idletasks()  # Ensure the UI updates immediately
-    
-    def expand_all_topics(self):
-        """Expand all topics in the tree."""
-        if not hasattr(self, 'tree'):
-            return
-            
-        self.all_expanded = True
-        if hasattr(self, 'toggle_expand_btn'):
-            self.toggle_expand_btn.config(text='▲')
-            
-        # Get all topic items in the tree
-        for item in self.tree.get_children(''):
-            # Check if the item is a topic (has 'topic' tag)
-            if 'topic' in self.tree.item(item, 'tags'):
-                # Open the topic
-                self.tree.item(item, open=True)
-        
-        self.status_var.set("Все темы развернуты")
-    
     def load_tree_data(self):
         """Load topics and notes into the tree with proper hierarchy and icons."""
         if not hasattr(self, 'tree'):
             return  # Tree not initialized yet
             
-        # Save expanded state of topics before clearing
-        expanded_topics = set()
-        if hasattr(self, 'topic_map'):  # Check if we have the previous topic_map
-            for topic_id, item_id in self.topic_map.items():
-                if self.tree.exists(item_id) and self.tree.item(item_id, 'open'):
-                    expanded_topics.add(topic_id)
-        
         # Clear existing items
         for item in self.tree.get_children():
             self.tree.delete(item)
-            
-        # Reset topic_map for the new tree
-        self.topic_map = {}
         
         try:
             # Get or create root "Темы" topic
@@ -795,7 +715,6 @@ class NoteTakingApp:
                 text='📁 Темы',
                 tags=('topic', 'root')
             )
-            self.topic_map[root_topic_id] = root_item_id
             
             # Function to add topics recursively
             def add_topics(parent_id, parent_item_id):
@@ -805,7 +724,6 @@ class NoteTakingApp:
                         
                     topic_id = f"topic_{topic['id']}"
                     topic_map[topic['id']] = topic_id
-                    self.topic_map[topic['id']] = topic_id
                     
                     self.tree.insert(
                         parent_item_id, 'end',
@@ -835,14 +753,8 @@ class NoteTakingApp:
                         tags=('note',)
                     )
             
-            # Restore expanded state of topics
-            for topic_id in expanded_topics:
-                if topic_id in self.topic_map:
-                    self.tree.item(self.topic_map[topic_id], open=True)
-            
-            # If no topics were expanded, expand the root by default
-            if not expanded_topics:
-                self.tree.item(root_item_id, open=True)
+            # Expand the root topic by default
+            self.tree.item(root_item_id, open=True)
             
             # Force update the tree view
             self.tree.update_idletasks()
@@ -864,19 +776,6 @@ class NoteTakingApp:
             note_id = int(item_id.split('_')[1])
             self.load_note(note_id)
     
-    def expand_all_subtopics(self, item_id):
-        """Recursively expand all subtopics of the given item."""
-        if not item_id.startswith('topic_'):
-            return
-            
-        # Get all children of the current item
-        children = self.tree.get_children(item_id)
-        for child_id in children:
-            # If it's a topic, expand it and its children
-            if child_id.startswith('topic_'):
-                self.tree.item(child_id, open=True)
-                self.expand_all_subtopics(child_id)
-    
     def on_tree_double_click(self, event):
         """Handle double-click on a tree item."""
         region = self.tree.identify_region(event.x, event.y)
@@ -893,8 +792,6 @@ class NoteTakingApp:
                 self.tree.item(item_id, open=False)
             else:
                 self.tree.item(item_id, open=True)
-                # Expand all subtopics when opening a topic
-                self.expand_all_subtopics(item_id)
     
     def show_tree_context_menu(self, event):
         """Show the context menu for the tree."""
@@ -902,78 +799,6 @@ class NoteTakingApp:
         if item_id:
             self.tree.selection_set(item_id)
             self.tree_menu.post(event.x_root, event.y_root)
-    
-    class TopicDialog(tk.Toplevel):
-        def __init__(self, parent, title=None):
-            super().__init__(parent)
-            self.title(title or "Новая тема")
-            self.parent = parent
-            self.result = None
-            
-            # Make window modal and set minimum size
-            self.transient(parent)
-            self.resizable(False, False)  # Disable resizing
-            
-            # Center the dialog
-            self.geometry("300x120")
-            self.update_idletasks()
-            width = self.winfo_width()
-            height = self.winfo_height()
-            x = (self.winfo_screenwidth() // 2) - (width // 2)
-            y = (self.winfo_screenheight() // 2) - (height // 2)
-            self.geometry(f'+{x}+{y}')
-            
-            # Add padding around the content
-            self.columnconfigure(0, weight=1)
-            self.rowconfigure(0, weight=1)
-            
-            # Create main frame
-            main_frame = ttk.Frame(self, padding=10)
-            main_frame.grid(row=0, column=0, sticky='nsew')
-            
-            # Label
-            label = ttk.Label(main_frame, text="Введите название темы:")
-            label.pack(pady=(10, 5), anchor='w')
-            
-            # Entry field
-            self.entry = ttk.Entry(main_frame, width=30)
-            self.entry.pack(pady=5, fill=tk.X)
-            self.entry.focus_set()
-            
-            # Buttons frame
-            btn_frame = ttk.Frame(main_frame)
-            btn_frame.pack(pady=(10, 0), anchor='e')
-            
-            # OK button
-            ok_btn = ttk.Button(btn_frame, text="OK", command=self.on_ok, width=10)
-            ok_btn.pack(side=tk.RIGHT, padx=5)
-            
-            # Cancel button
-            cancel_btn = ttk.Button(btn_frame, text="Отмена", command=self.on_cancel, width=10)
-            cancel_btn.pack(side=tk.RIGHT)
-            
-            # Bind Enter and Escape keys
-            self.bind('<Return>', lambda e: self.on_ok())
-            self.bind('<Escape>', lambda e: self.on_cancel())
-            
-            # Set focus to the entry field
-            self.entry.focus_set()
-            
-            # Make the window modal
-            self.grab_set()
-            self.wait_window(self)
-        
-        def on_ok(self):
-            self.result = self.entry.get().strip()
-            self.destroy()
-            
-        def on_cancel(self):
-            self.result = None
-            self.destroy()
-            
-        def show(self):
-            self.wait_window()
-            return self.result
     
     def create_topic_under_selected(self):
         """Create a new topic under the selected one."""
@@ -985,10 +810,7 @@ class NoteTakingApp:
             if item_id.startswith('topic_'):
                 parent_id = int(item_id.split('_')[1])
         
-        # Use custom dialog instead of simpledialog
-        dialog = self.TopicDialog(self.root, "Новая тема")
-        name = dialog.result
-        
+        name = simpledialog.askstring("Новая тема", "Введите название темы:")
         if name and name.strip():
             try:
                 self.db.create_topic(name.strip(), parent_id)
@@ -998,78 +820,6 @@ class NoteTakingApp:
                 error_msg = str(e) or "Неизвестная ошибка"
                 logger.error(f"Error creating topic: {error_msg}")
                 messagebox.showerror("Ошибка", f"Не удалось создать тему: {error_msg}")
-    
-    class NoteDialog(tk.Toplevel):
-        def __init__(self, parent, title=None, default_title=""):
-            super().__init__(parent)
-            self.title(title or "Новая заметка")
-            self.parent = parent
-            self.result = None
-            
-            # Make window modal and set minimum size
-            self.transient(parent)
-            self.resizable(False, False)  # Disable resizing
-            
-            # Center the dialog
-            self.geometry("400x150")
-            self.update_idletasks()
-            width = self.winfo_width()
-            height = self.winfo_height()
-            x = (self.winfo_screenwidth() // 2) - (width // 2)
-            y = (self.winfo_screenheight() // 2) - (height // 2)
-            self.geometry(f'+{x}+{y}')
-            
-            # Add padding around the content
-            self.columnconfigure(0, weight=1)
-            self.rowconfigure(0, weight=1)
-            
-            # Create main frame
-            main_frame = ttk.Frame(self, padding=10)
-            main_frame.grid(row=0, column=0, sticky='nsew')
-            
-            # Label and entry for note title
-            title_label = ttk.Label(main_frame, text="Введите название заметки:")
-            title_label.pack(pady=(5, 5), anchor='w')
-            
-            self.title_entry = ttk.Entry(main_frame, width=40)
-            self.title_entry.pack(pady=5, fill=tk.X)
-            self.title_entry.insert(0, default_title)
-            self.title_entry.select_range(0, tk.END)
-            
-            # Buttons frame
-            btn_frame = ttk.Frame(main_frame)
-            btn_frame.pack(pady=(15, 0), anchor='e')
-            
-            # OK button
-            ok_btn = ttk.Button(btn_frame, text="Создать", command=self.on_ok, width=10)
-            ok_btn.pack(side=tk.RIGHT, padx=5)
-            
-            # Cancel button
-            cancel_btn = ttk.Button(btn_frame, text="Отмена", command=self.on_cancel, width=10)
-            cancel_btn.pack(side=tk.RIGHT)
-            
-            # Bind Enter and Escape keys
-            self.bind('<Return>', lambda e: self.on_ok())
-            self.bind('<Escape>', lambda e: self.on_cancel())
-            
-            # Set focus to the entry field
-            self.title_entry.focus_set()
-            
-            # Make the window modal
-            self.grab_set()
-            self.wait_window(self)
-        
-        def on_ok(self):
-            self.result = self.title_entry.get().strip()
-            self.destroy()
-            
-        def on_cancel(self):
-            self.result = None
-            self.destroy()
-            
-        def show(self):
-            self.wait_window()
-            return self.result
     
     def create_note_under_selected(self):
         """Create a new note under the selected topic."""
@@ -1086,15 +836,8 @@ class NoteTakingApp:
             date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
             default_title = f"Новая заметка {date_str}"
             
-            # Show custom dialog to get note title
-            dialog = self.NoteDialog(self.root, "Новая заметка", default_title)
-            if dialog.result is None:  # User clicked Cancel
-                return
-                
-            note_title = dialog.result if dialog.result.strip() else default_title
-            
             # Create the note
-            note_id = self.db.create_note(note_title, topic_id)
+            note_id = self.db.create_note(default_title, topic_id)
             
             if not note_id:
                 raise Exception("Не удалось создать заметку")
@@ -1119,84 +862,12 @@ class NoteTakingApp:
             self.title_entry.focus_set()
             self.title_entry.select_range(0, tk.END)
             
-            self.status_var.set(f"Создана новая заметка: {note_title}")
+            self.status_var.set(f"Создана новая заметка: {default_title}")
             
         except Exception as e:
             error_msg = str(e) or "Неизвестная ошибка"
-            logger.error(f"Error creating note: {error_msg}")
+            logger.error(f"Error creating note: {error_msg}", exc_info=True)
             messagebox.showerror("Ошибка", f"Не удалось создать заметку: {error_msg}")
-    
-    class RenameDialog(tk.Toplevel):
-        def __init__(self, parent, title=None, current_name=""):
-            super().__init__(parent)
-            self.title(title or "Переименовать")
-            self.parent = parent
-            self.result = None
-            
-            # Make window modal and set minimum size
-            self.transient(parent)
-            self.resizable(False, False)
-            
-            # Center the dialog
-            self.geometry("400x150")
-            self.update_idletasks()
-            width = self.winfo_width()
-            height = self.winfo_height()
-            x = (self.winfo_screenwidth() // 2) - (width // 2)
-            y = (self.winfo_screenheight() // 2) - (height // 2)
-            self.geometry(f'+{x}+{y}')
-            
-            # Add padding around the content
-            self.columnconfigure(0, weight=1)
-            self.rowconfigure(0, weight=1)
-            
-            # Create main frame
-            main_frame = ttk.Frame(self, padding=10)
-            main_frame.grid(row=0, column=0, sticky='nsew')
-            
-            # Label and entry for new name
-            title_label = ttk.Label(main_frame, text="Введите новое название:")
-            title_label.pack(pady=(5, 5), anchor='w')
-            
-            self.name_entry = ttk.Entry(main_frame, width=40)
-            self.name_entry.pack(pady=5, fill=tk.X)
-            self.name_entry.insert(0, current_name)
-            self.name_entry.select_range(0, tk.END)
-            
-            # Buttons frame
-            btn_frame = ttk.Frame(main_frame)
-            btn_frame.pack(pady=(15, 0), anchor='e')
-            
-            # OK button
-            ok_btn = ttk.Button(btn_frame, text="ОК", command=self.on_ok, width=10)
-            ok_btn.pack(side=tk.RIGHT, padx=5)
-            
-            # Cancel button
-            cancel_btn = ttk.Button(btn_frame, text="Отмена", command=self.on_cancel, width=10)
-            cancel_btn.pack(side=tk.RIGHT)
-            
-            # Bind Enter and Escape keys
-            self.bind('<Return>', lambda e: self.on_ok())
-            self.bind('<Escape>', lambda e: self.on_cancel())
-            
-            # Set focus to the entry field
-            self.name_entry.focus_set()
-            
-            # Make the window modal
-            self.grab_set()
-            self.wait_window(self)
-        
-        def on_ok(self):
-            self.result = self.name_entry.get().strip()
-            self.destroy()
-            
-        def on_cancel(self):
-            self.result = None
-            self.destroy()
-            
-        def show(self):
-            self.wait_window()
-            return self.result
     
     def rename_selected_item(self):
         """Rename the selected topic or note."""
@@ -1207,10 +878,7 @@ class NoteTakingApp:
         item_id = selected[0]
         current_name = self.tree.item(item_id, 'text')
         
-        # Show custom rename dialog
-        dialog = self.RenameDialog(self.root, "Переименовать", current_name)
-        new_name = dialog.result
-        
+        new_name = simpledialog.askstring("Переименовать", "Введите новое название:", initialvalue=current_name)
         if new_name and new_name.strip() and new_name != current_name:
             try:
                 if item_id.startswith('topic_'):

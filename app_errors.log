@@ -520,3 +520,52 @@ Traceback (most recent call last):
     label=f"{self.icons['add']} Новая тема",
              ~~~~~~~~~~^^^^^^^
 KeyError: 'add'
+2025-11-28 17:57:03,189 - __main__ - ERROR - Error creating note: 'NoteTakingApp' object has no attribute 'NoteDialog'
+2025-11-28 17:57:06,644 - __main__ - ERROR - Error creating note: 'NoteTakingApp' object has no attribute 'NoteDialog'
+2025-11-28 22:43:37,525 - __main__ - ERROR - Error saving note content: 'DatabaseManager' object has no attribute 'update_note_content'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1274, in save_current_note
+    success = self.db.update_note_content(self.current_note_id, content)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'update_note_content'
+2025-11-28 22:43:38,213 - __main__ - ERROR - Error saving note content: 'DatabaseManager' object has no attribute 'update_note_content'
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1274, in save_current_note
+    success = self.db.update_note_content(self.current_note_id, content)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'update_note_content'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1274, in save_current_note
+    success = self.db.update_note_content(self.current_note_id, content)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'update_note_content'
+2025-11-28 22:43:41,629 - __main__ - ERROR - Error saving note before exit: 'DatabaseManager' object has no attribute 'update_note_content'
+2025-11-28 22:54:16,122 - __main__ - CRITICAL - Fatal error: cannot access local variable 'tk' where it is not associated with a value
+
+Traceback:
+Traceback (most recent call last):
+  File "C:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1645, in main
+    root = tk.Tk()
+           ^^
+UnboundLocalError: cannot access local variable 'tk' where it is not associated with a value
+Traceback (most recent call last):
+  File "C:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1645, in main
+    root = tk.Tk()
+           ^^
+UnboundLocalError: cannot access local variable 'tk' where it is not associated with a value
+2025-11-28 22:54:27,889 - __main__ - CRITICAL - Fatal error: cannot access local variable 'tk' where it is not associated with a value
+
+Traceback:
+Traceback (most recent call last):
+  File "C:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1649, in main
+    root = tk.Tk()
+           ^^
+UnboundLocalError: cannot access local variable 'tk' where it is not associated with a value
+Traceback (most recent call last):
+  File "C:\Users\nik_s\Documents\MindForge\tkinter_app.py", line 1649, in main
+    root = tk.Tk()
+           ^^
+UnboundLocalError: cannot access local variable 'tk' where it is not associated with a value

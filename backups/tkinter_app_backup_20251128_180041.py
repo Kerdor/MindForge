@@ -470,14 +470,19 @@ class NoteTakingApp:
         # Create menu (initially hidden)
         self.create_menu = tk.Menu(self.root, tearoff=0)
         self.create_menu.add_command(
-            label=f"📄 Новая заметка",
+            label=f"{self.icons['note']} Новая заметка",
             command=self.create_note_under_selected,
             accelerator="Alt+N"
         )
         self.create_menu.add_command(
-            label=f"📁 Новая тема",
+            label=f"{self.icons['topic']} Новая тема",
             command=self.create_topic_under_selected,
             accelerator="Alt+T"
+        )
+        self.create_menu.add_command(
+            label=f"{self.icons['tag']} Новый тег",
+            command=self.show_create_tag_dialog,
+            accelerator="Alt+G"
         )
         self.rename_btn.pack(side=tk.LEFT, padx=1)
         
@@ -494,17 +499,6 @@ class NoteTakingApp:
         # Separator
         ttk.Separator(right_buttons_frame, orient='vertical').pack(side=tk.LEFT, padx=3, fill='y')
         
-        # Toggle expand/collapse button
-        self.toggle_expand_btn = ttk.Button(
-            right_buttons_frame,
-            text='▼',  # Default to collapse (down arrow)
-            command=self.toggle_expand_all,
-            style='Toolbutton',
-            width=2
-        )
-        self.toggle_expand_btn.pack(side=tk.LEFT, padx=1)
-        self.all_expanded = False  # Track the current state
-        
         # Refresh button
         self.refresh_btn = ttk.Button(
             right_buttons_frame,
@@ -516,18 +510,12 @@ class NoteTakingApp:
         self.refresh_btn.pack(side=tk.LEFT, padx=1)
         
         # Bind keyboard shortcuts
-        self.root.bind_all('<Control-n>', lambda e: self.create_note_under_selected())
-        self.root.bind_all('<Control-N>', lambda e: self.create_note_under_selected())
-        self.root.bind_all('<Control-t>', lambda e: self.create_topic_under_selected())
-        self.root.bind_all('<Control-T>', lambda e: self.create_topic_under_selected())
-        self.root.bind_all('<Control-g>', lambda e: self.show_create_tag_dialog())
-        self.root.bind_all('<Control-G>', lambda e: self.show_create_tag_dialog())
-        
-        # Add more common shortcuts
-        self.root.bind_all('<Control-s>', lambda e: self.save_current_note() if hasattr(self, 'save_current_note') else None)
-        self.root.bind_all('<Control-S>', lambda e: self.save_current_note() if hasattr(self, 'save_current_note') else None)
-        self.root.bind_all('<Control-q>', lambda e: self.on_closing())
-        self.root.bind_all('<Control-Q>', lambda e: self.on_closing())
+        self.root.bind_all('<Alt-n>', lambda e: self.create_note_under_selected())
+        self.root.bind_all('<Alt-N>', lambda e: self.create_note_under_selected())
+        self.root.bind_all('<Alt-t>', lambda e: self.create_topic_under_selected())
+        self.root.bind_all('<Alt-T>', lambda e: self.create_topic_under_selected())
+        self.root.bind_all('<Alt-g>', lambda e: self.show_create_tag_dialog())
+        self.root.bind_all('<Alt-G>', lambda e: self.show_create_tag_dialog())
         
         # Create the treeview with a scrollbar
         tree_frame = ttk.Frame(self.tree_container)
@@ -621,8 +609,16 @@ class NoteTakingApp:
         self.right_panel = ttk.Frame(self.main_container, padding=5)
         self.main_container.add(self.right_panel, weight=1)
         
-        # Note title variable (kept for compatibility)
+        # Note title
         self.note_title_var = tk.StringVar()
+        self.title_entry = ttk.Entry(
+            self.right_panel, 
+            textvariable=self.note_title_var,
+            font=('Segoe UI', 14, 'bold')
+        )
+        self.title_entry.pack(fill=tk.X, pady=(0, 10))
+        self.title_entry.bind('<KeyRelease>', self.on_title_changed)
+        self.title_entry.bind('<Return>', self.on_title_changed)
         
         # Note content
         self.note_content = tk.Text(
@@ -647,103 +643,14 @@ class NoteTakingApp:
         # Set initial status
         self.status_var.set("Готово")
     
-    def toggle_expand_all(self):
-        """Toggle between expanding and collapsing all topics."""
-        if not hasattr(self, 'tree'):
-            return
-            
-        # Toggle the state
-        self.all_expanded = not self.all_expanded
-        
-        # Update button text based on the new state
-        self.toggle_expand_btn.config(text='▲' if self.all_expanded else '▼')
-        
-        # Function to recursively set open state for all subtopics
-        def set_subtree_state(parent_id, is_open):
-            for child_id in self.tree.get_children(parent_id):
-                if 'topic' in self.tree.item(child_id, 'tags'):
-                    self.tree.item(child_id, open=is_open)
-                    set_subtree_state(child_id, is_open)
-        
-        # Process all root-level topics
-        for item in self.tree.get_children(''):
-            if 'topic' in self.tree.item(item, 'tags'):
-                self.tree.item(item, open=self.all_expanded)
-                # Always update all children to match the parent's state
-                set_subtree_state(item, self.all_expanded)
-        
-        # Update status bar
-        action = "развернуты" if self.all_expanded else "свернуты"
-        self.status_var.set(f"Все темы {action}")
-        
-        # Force update the tree view to ensure all changes are visible
-        self.tree.update_idletasks()
-    
-    def collapse_all_topics(self):
-        """Collapse all topics in the tree, including all subtopics."""
-        if not hasattr(self, 'tree'):
-            return
-            
-        self.all_expanded = False
-        if hasattr(self, 'toggle_expand_btn'):
-            self.toggle_expand_btn.config(text='▼')
-        
-        # Function to recursively collapse all subtopics
-        def collapse_recursive(parent_id):
-            for child_id in self.tree.get_children(parent_id):
-                if 'topic' in self.tree.item(child_id, 'tags'):
-                    # First collapse all children
-                    collapse_recursive(child_id)
-                    # Then collapse the current topic
-                    self.tree.item(child_id, open=False)
-        
-        # Start with root items
-        for item in self.tree.get_children(''):
-            if 'topic' in self.tree.item(item, 'tags'):
-                # First collapse all children
-                collapse_recursive(item)
-                # Then collapse the root topic
-                self.tree.item(item, open=False)
-        
-        self.status_var.set("Все темы свернуты")
-        self.tree.update_idletasks()  # Ensure the UI updates immediately
-    
-    def expand_all_topics(self):
-        """Expand all topics in the tree."""
-        if not hasattr(self, 'tree'):
-            return
-            
-        self.all_expanded = True
-        if hasattr(self, 'toggle_expand_btn'):
-            self.toggle_expand_btn.config(text='▲')
-            
-        # Get all topic items in the tree
-        for item in self.tree.get_children(''):
-            # Check if the item is a topic (has 'topic' tag)
-            if 'topic' in self.tree.item(item, 'tags'):
-                # Open the topic
-                self.tree.item(item, open=True)
-        
-        self.status_var.set("Все темы развернуты")
-    
     def load_tree_data(self):
         """Load topics and notes into the tree with proper hierarchy and icons."""
         if not hasattr(self, 'tree'):
             return  # Tree not initialized yet
             
-        # Save expanded state of topics before clearing
-        expanded_topics = set()
-        if hasattr(self, 'topic_map'):  # Check if we have the previous topic_map
-            for topic_id, item_id in self.topic_map.items():
-                if self.tree.exists(item_id) and self.tree.item(item_id, 'open'):
-                    expanded_topics.add(topic_id)
-        
         # Clear existing items
         for item in self.tree.get_children():
             self.tree.delete(item)
-            
-        # Reset topic_map for the new tree
-        self.topic_map = {}
         
         try:
             # Get or create root "Темы" topic
@@ -795,7 +702,6 @@ class NoteTakingApp:
                 text='📁 Темы',
                 tags=('topic', 'root')
             )
-            self.topic_map[root_topic_id] = root_item_id
             
             # Function to add topics recursively
             def add_topics(parent_id, parent_item_id):
@@ -805,7 +711,6 @@ class NoteTakingApp:
                         
                     topic_id = f"topic_{topic['id']}"
                     topic_map[topic['id']] = topic_id
-                    self.topic_map[topic['id']] = topic_id
                     
                     self.tree.insert(
                         parent_item_id, 'end',
@@ -835,14 +740,8 @@ class NoteTakingApp:
                         tags=('note',)
                     )
             
-            # Restore expanded state of topics
-            for topic_id in expanded_topics:
-                if topic_id in self.topic_map:
-                    self.tree.item(self.topic_map[topic_id], open=True)
-            
-            # If no topics were expanded, expand the root by default
-            if not expanded_topics:
-                self.tree.item(root_item_id, open=True)
+            # Expand the root topic by default
+            self.tree.item(root_item_id, open=True)
             
             # Force update the tree view
             self.tree.update_idletasks()
@@ -864,19 +763,6 @@ class NoteTakingApp:
             note_id = int(item_id.split('_')[1])
             self.load_note(note_id)
     
-    def expand_all_subtopics(self, item_id):
-        """Recursively expand all subtopics of the given item."""
-        if not item_id.startswith('topic_'):
-            return
-            
-        # Get all children of the current item
-        children = self.tree.get_children(item_id)
-        for child_id in children:
-            # If it's a topic, expand it and its children
-            if child_id.startswith('topic_'):
-                self.tree.item(child_id, open=True)
-                self.expand_all_subtopics(child_id)
-    
     def on_tree_double_click(self, event):
         """Handle double-click on a tree item."""
         region = self.tree.identify_region(event.x, event.y)
@@ -893,8 +779,6 @@ class NoteTakingApp:
                 self.tree.item(item_id, open=False)
             else:
                 self.tree.item(item_id, open=True)
-                # Expand all subtopics when opening a topic
-                self.expand_all_subtopics(item_id)
     
     def show_tree_context_menu(self, event):
         """Show the context menu for the tree."""
